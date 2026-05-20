@@ -24,10 +24,14 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
+  lang="en"
+  className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+>
+  <body className="min-h-full flex flex-col">
+    {children}
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+  </body>
+</html>
   );
 }
