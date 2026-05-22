@@ -690,20 +690,57 @@ export default function RunLabPremiumSystem() {
           <p style={S.ss}>คอร์สฟื้นฟูสมดุลความแข็งแรงกล้ามเนื้อ ออกแบบมาเพื่อแก้ปวดและป้องกันจุดเสี่ยงเจ็บของคุณโดยเฉพาะ</p>
 
           <div style={S.courseGrid}>
-            <div style={S.courseCard}>
-              <div style={{ padding: 20 }}>
-                <div style={{ width: "100%", height: 140, background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, marginBottom: 16, border: "1px solid #1e293b" }}>🦵</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>PRO-KNEE: โปรแกรมแก้ปวดเข่าสะบ้า</h3>
-                <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>ลดแรงกดเค้นที่ผิวข้อสะบ้าเข่า เสริมความแข็งแรงกล้ามเนื้อรอบหน้าขาเพื่อความมั่นคงในการลงน้ำหนัก</p>
-                <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
-                  <span>⏱️ 6 สัปดาห์</span><span>📹 24 วิดีโอ</span>
-                </div>
-              </div>
-              <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
-                <div style={S.priceTag}>1,490 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
-                <button style={{ ...S.bp, padding: "8px 16px", fontSize: 12 }}>เลือกคอร์สนี้</button>
-              </div>
-            </div>
+        <div style={S.courseCard}>
+  <div style={{ padding: 20 }}>
+    <div style={{ 
+      width: "100%", 
+      height: 140, 
+      background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", 
+      borderRadius: 14, 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center", 
+      fontSize: 36, 
+      marginBottom: 16, 
+      border: "1px solid #1e293b" 
+    }}>🦵</div>
+    
+    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>
+      PRO-KNEE: โปรแกรมแก้ปวดเข่าสะบ้า
+    </h3>
+    
+    <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>
+      ลดแรงกดเค้นที่ผิวข้อสะบ้าเข่า เสริมความแข็งแรงกล้ามเนื้อรอบหน้าขาเพื่อความมั่นคงในการลงน้ำหนัก
+    </p>
+    
+    <div style={{ 
+      display: "flex", 
+      gap: 12, 
+      fontSize: 11, 
+      color: "#94a3b8", 
+      marginTop: 14, 
+      background: "#040914", 
+      padding: "6px 12px", 
+      borderRadius: 8, 
+      width: "fit-content" 
+    }}>
+      <span>⏱️ 6 สัปดาห์</span>
+      <span>📹 24 วิดีโอ</span>
+    </div>
+  </div>
+  
+  <div style={{ 
+    background: "#0d1727", 
+    padding: "16px 20px", 
+    display: "flex", 
+    justifyContent: "space-between", 
+    alignItems: "center",
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14
+  }}>
+    <span style={{ fontSize: 14, color: "#38bdf8" }}>เริ่มฝึกเลย</span>
+  </div>
+</div>
 
             <div style={S.courseCard}>
               <div style={{ padding: 20 }}>
