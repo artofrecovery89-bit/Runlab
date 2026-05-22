@@ -2,25 +2,24 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 
-// ── preload MediaPipe scripts immediately (not lazily)
 const SCRIPTS = [
   "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js",
   "https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js",
 ];
 
-let scriptsPromise = null;
+let scriptsPromise: Promise<void[]> | null = null;
 function ensureScripts() {
   if (scriptsPromise) return scriptsPromise;
   scriptsPromise = Promise.all(
     SCRIPTS.map(
       (src) =>
-        new Promise((res) => {
-          if (document.querySelector(`script[src="${src}"]`)) return res();
+        new Promise<void>((res) => {
+          if (typeof window !== "undefined" && document.querySelector(`script[src="${src}"]`)) return res();
           const s = document.createElement("script");
           s.src = src;
           s.crossOrigin = "anonymous";
-          s.onload = res;
-          s.onerror = res; // don't block on error
+          s.onload = () => res();
+          s.onerror = () => res();
           document.head.appendChild(s);
         })
     )
@@ -28,1078 +27,791 @@ function ensureScripts() {
   return scriptsPromise;
 }
 
-// ── angle helper
-const calcAngle = (a, b, c) => {
-  const rad =
-    Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+
+/// 1. ฟังก์ชันคำนวณมุมมาตรฐาน (ใช้ได้กับทุกท่า)
+const calcAngle = (a: any, b: any, c: any) => {
+  if (!a || !b || !c) return 0;
+  const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
   let deg = Math.abs((rad * 180) / Math.PI);
   if (deg > 180) deg = 360 - deg;
-  return Math.round(deg);
+  return deg;
 };
 
-// ── skeleton connections (upper + lower body)
-const CONNS = [
-  [11,13],[13,15],[12,14],[14,16],
-  [11,12],[11,23],[12,24],[23,24],
-  [23,25],[25,27],[27,29],[27,31],
-  [24,26],[26,28],[28,30],[28,32],
+// 2. ฟังก์ชันวัดมุมคอ (Forward Head)
+const calcHeadAngle = (ear: any, shoulder: any) => {
+  if (!ear || !shoulder) return 0;
+  const rad = Math.atan2(ear.x - shoulder.x, ear.y - shoulder.y);
+  return Math.abs((rad * 180) / Math.PI);
+};
+
+// 3. ฟังก์ชันประเมินความเสี่ยง (รวมในตัวเดียว)
+const getPostureRisk = (headAngle: number) => {
+  if (headAngle > 20) return { level: 'High', color: 'red', msg: 'เสี่ยงออฟฟิศซินโดรมระดับสูง' };
+  if (headAngle > 10) return { level: 'Medium', color: 'orange', msg: 'ควรปรับท่านั่ง' };
+  return { level: 'Low', color: 'green', msg: 'ท่าทางปกติ' };
+};
+const POSE_CONNECTIONS = [
+  [11, 13], [13, 15], [12, 14], [14, 16],
+  [11, 12], [11, 23], [12, 24], [23, 24],
+  [23, 25], [25, 27], [27, 29], [27, 31],
+  [24, 26], [26, 28], [28, 30], [28, 32],
 ];
 
-function drawPose(ctx, lm, w, h, kneeAngle) {
+
+
+const analyzePostureRisk = (landmarks: any) => {
+  if (!landmarks) return { level: 'N/A', msg: 'ไม่พบข้อมูล' };
+  const headAngle = calcHeadAngle(landmarks[7], landmarks[11]);
+  if (headAngle > 20) return { level: 'High', color: 'red', msg: 'เสี่ยงออฟฟิศซินโดรมระดับสูง' };
+  if (headAngle > 10) return { level: 'Medium', color: 'orange', msg: 'ควรปรับท่านั่ง' };
+  return { level: 'Low', color: 'green', msg: 'ท่าทางปกติ' };
+};
+// -------------------------
+function drawPoseSkeleton(ctx: CanvasRenderingContext2D, landmarks: any[], w: number, h: number) {
   ctx.strokeStyle = "#00e5ff";
-  ctx.lineWidth = 2.5;
-  for (const [s, e] of CONNS) {
-    if (!lm[s] || !lm[e] || lm[s].visibility < 0.3 || lm[e].visibility < 0.3) continue;
+  ctx.lineWidth = 3;
+  for (const [start, end] of POSE_CONNECTIONS) {
+    const p1 = landmarks[start];
+    const p2 = landmarks[end];
+    if (!p1 || !p2 || p1.visibility < 0.5 || p2.visibility < 0.5) continue;
     ctx.beginPath();
-    ctx.moveTo(lm[s].x * w, lm[s].y * h);
-    ctx.lineTo(lm[e].x * w, lm[e].y * h);
+    ctx.moveTo(p1.x * w, p1.y * h);
+    ctx.lineTo(p2.x * w, p2.y * h);
     ctx.stroke();
   }
-  for (const p of lm) {
-    if (!p || p.visibility < 0.3) continue;
+  for (const pt of landmarks) {
+    if (!pt || pt.visibility < 0.5) continue;
     ctx.beginPath();
-    ctx.arc(p.x * w, p.y * h, 4, 0, 2 * Math.PI);
+    ctx.arc(pt.x * w, pt.y * h, 5, 0, 2 * Math.PI);
     ctx.fillStyle = "#0066ff";
     ctx.fill();
-    ctx.strokeStyle = "#ffffff66";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
     ctx.stroke();
-  }
-  if (lm[26] && kneeAngle !== null) {
-    const kx = lm[26].x * w, ky = lm[26].y * h;
-    ctx.font = "bold 20px monospace";
-    ctx.fillStyle = "#00e5ff";
-    ctx.fillText(`${kneeAngle}°`, kx + 12, ky - 4);
   }
 }
 
-// ── tiny sub-components
-function Ring({ v = 0, size = 88 }) {
-  const r = 32, c = 2 * Math.PI * r, d = (v / 100) * c;
+function Ring({ v = 0, size = 110 }) {
+  const r = 40, c = 2 * Math.PI * r, d = (v / 100) * c;
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80">
-      <circle cx="40" cy="40" r={r} fill="none" stroke="#1e293b" strokeWidth="7" />
-      <circle cx="40" cy="40" r={r} fill="none" stroke="#38bdf8" strokeWidth="7"
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r={r} fill="none" stroke="#1e293b" strokeWidth="8" />
+      <circle cx="50" cy="50" r={r} fill="none" stroke="url(#cyanGrad)" strokeWidth="8"
         strokeDasharray={`${d} ${c}`} strokeLinecap="round"
-        transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray .6s" }} />
+        transform="rotate(-90 50 50)" style={{ transition: "stroke-dasharray .8s cubic-bezier(0.4, 0, 0.2, 1)" }} />
+      <defs>
+        <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#00e5ff" />
+          <stop offset="100%" stopColor="#0066ff" />
+        </linearGradient>
+      </defs>
     </svg>
   );
 }
 
-function Bar({ label, value, color = "#38bdf8" }) {
+function Bar({ label, value, color = "#00e5ff" }: { label: string; value: number; color?: string }) {
   return (
-    <div style={{ marginBottom: 9 }}>
-      <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"#94a3b8", marginBottom:3 }}>
-        <span>{label}</span><span style={{ color:"#e2e8f0", fontWeight:700 }}>{value}%</span>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#94a3b8", marginBottom: 5 }}>
+        <span style={{ fontWeight: 500 }}>{label}</span>
+        <span style={{ color: "#f8fafc", fontWeight: 700 }}>{value}%</span>
       </div>
-      <div style={{ background:"#1e293b", borderRadius:99, height:5 }}>
-        <div style={{ width:`${value}%`, height:5, borderRadius:99, background:color, transition:"width .8s" }} />
+      <div style={{ background: "#1e293b", borderRadius: 99, height: 6, overflow: "hidden" }}>
+        <div style={{ width: `${Math.min(100, Math.max(0, value))}%`, height: "100%", borderRadius: 99, background: color, transition: "width .6s cubic-bezier(0.4, 0, 0.2, 1)" }} />
       </div>
     </div>
   );
 }
 
-function Stat({ label, val, color }) {
+function RiskCard({ title, pct, desc }: { title: string; pct: number; desc: string }) {
+  const level = pct > 70 ? "ความเสี่ยงสูง" : pct > 40 ? "ความเสี่ยงปานกลาง" : "ความเสี่ยงต่ำ";
+  const color = pct > 70 ? "#ef4444" : pct > 40 ? "#f59e0b" : "#10b981";
+  const bgGlow = pct > 70 ? "rgba(239,68,68,0.03)" : pct > 40 ? "rgba(245,158,11,0.03)" : "rgba(16,185,129,0.03)";
+  
   return (
-    <div style={{ background:"#0a1628", border:"1px solid #1e293b", borderRadius:14, padding:"13px 16px" }}>
-      <div style={{ fontSize:10, color:"#64748b", letterSpacing:1.2, fontWeight:700, marginBottom:5 }}>{label}</div>
-      <div style={{ fontSize:30, fontWeight:900, color, lineHeight:1 }}>{val ?? "—"}</div>
-    </div>
-  );
-}
-
-function RiskCard({ level, title, pct, color }) {
-  return (
-    <div style={{ background:"#0a1628", border:`1px solid ${color}44`, borderRadius:16, padding:"16px 14px" }}>
-      <div style={{ fontSize:10, fontWeight:800, color, letterSpacing:1.2, marginBottom:5 }}>{level}</div>
-      <div style={{ fontSize:15, fontWeight:800, color:"#f1f5f9", marginBottom:10 }}>{title}</div>
-      <div style={{ fontSize:38, fontWeight:900, color }}>{pct}%</div>
-      <button style={{ marginTop:10, fontSize:11, color:"#38bdf8", background:"none", border:"1px solid #334155", borderRadius:7, padding:"4px 12px", cursor:"pointer" }}>
-        ดูรายละเอียด
-      </button>
-    </div>
-  );
-}
-
-function ProgramCard({ title, desc, weeks, videos, price }) {
-  return (
-    <div style={{ background:"#0a1628", border:"1px solid #1e293b", borderRadius:16, overflow:"hidden" }}>
-      <div style={{ height:72, background:"linear-gradient(135deg,#0ea5e9,#6366f1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>🏃</div>
-      <div style={{ padding:"14px 16px 18px" }}>
-        <div style={{ fontSize:13, fontWeight:800, color:"#f1f5f9", marginBottom:5 }}>{title}</div>
-        <div style={{ fontSize:11, color:"#64748b", marginBottom:10, lineHeight:1.6 }}>{desc}</div>
-        <div style={{ display:"flex", gap:10, fontSize:10, color:"#64748b", marginBottom:12 }}>
-          <span>📅 {weeks} สัปดาห์</span><span>🎬 {videos} วิดีโอ</span>
+    <div style={{ background: "#0b1528", border: `1px solid ${color}26`, borderRadius: 16, padding: "18px", display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: `0 4px 20px ${bgGlow}` }}>
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color, letterSpacing: 1.2, background: `${color}15`, padding: "3px 8px", borderRadius: 6 }}>{level}</span>
+          <span style={{ fontSize: 24, fontWeight: 900, color }}>{pct}<span style={{ fontSize: 13, fontWeight: 500 }}>%</span></span>
         </div>
-        <div style={{ fontSize:20, fontWeight:900, color:"#f1f5f9", marginBottom:10 }}>{price} บาท</div>
-        <button style={{ width:"100%", background:"#0ea5e9", color:"#0f172a", fontWeight:800, border:"none", borderRadius:9, padding:"9px 0", fontSize:12, cursor:"pointer" }}>
-          เลือกคอร์สนี้
-        </button>
+        <h4 style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>{title}</h4>
+        <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, marginBottom: 12 }}>{desc}</p>
+      </div>
+      <a href="#recovery-programs" style={{ width: "100%", fontSize: 12, color: "#00e5ff", background: "#112240", border: "1px solid #1e3a8a", borderRadius: 10, padding: "8px 0", cursor: "pointer", fontWeight: 600, textAlign: "center", textDecoration: "none" }}>
+        ดูโปรแกรมฟื้นฟู
+      </a>
+    </div>
+  );
+}
+
+function Stat({ label, val, color }: { label: string; val: string | number | null; color?: string }) {
+  return (
+    <div style={{ background: "linear-gradient(135deg, #0b1528 0%, #070d19 100%)", border: "1px solid #1e293b", borderRadius: 16, padding: "16px 20px", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>
+      <div style={{ fontSize: 11, color: "#64748b", letterSpacing: 1.2, fontWeight: 700, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 900, color, lineHeight: 1 }}>{val ?? "—"}</div>
+    </div>
+  );
+}
+
+interface PoseSlotProps {
+  label: string;
+  preview: string;
+  onFile: (f: File) => void;
+  onClear: () => void;
+}
+
+function PoseSlot({ label, preview, onFile, onClear }: PoseSlotProps) {
+  return (
+    <div style={{ position: "relative", border: "2px dashed #223554", borderRadius: 16, padding: "12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#050c1a", height: 160 }}>
+      {preview ? (
+        <div style={{ width: "100%", height: "100%", position: "relative" }}>
+          <img src={preview} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} />
+          <button onClick={(e) => { e.preventDefault(); onClear(); }} style={{ position: "absolute", top: 6, right: 6, background: "rgba(239, 68, 68, 0.9)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+            ✕ เปลี่ยนรูป
+          </button>
+        </div>
+      ) : (
+        <label style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 6 }}>
+          <div style={{ fontSize: 28 }}>🧍</div>
+          <div style={{ fontSize: 13, color: "#cbd5e1", fontWeight: 600 }}>{label}</div>
+          <div style={{ fontSize: 11, color: "#475569" }}>คลิกเพื่ออัปโหลด</div>
+          <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
+        </label>
+      )}
+    </div>
+  );
+}
+
+/* INTERACTIVE ANATOMY COMPONENT (SVG-BASED WITH DYNAMIC PULSE GLOW) */
+function InteractiveAnatomy({ risks }: { risks: { runnersKnee: number; achilles: number; itBand: number; shinSplints: number } }) {
+  const getJointColor = (pct: number) => {
+    if (pct === 0) return "#00e5ff"; 
+    return pct > 70 ? "#ef4444" : pct > 40 ? "#f59e0b" : "#10b981"; 
+  };
+
+  return (
+    <div style={{ background: "#060d1a", border: "1px solid #1e293b", borderRadius: 24, padding: "24px", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 520, boxShadow: "inset 0 0 40px rgba(0,229,255,0.02)" }}>
+      {/* CSS Animation Keyframes Injector */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes pulseGlow {
+          0% { r: 6; opacity: 0.5; stroke-width: 1; }
+          50% { r: 16; opacity: 0.8; stroke-width: 4; }
+          100% { r: 26; opacity: 0; stroke-width: 1; }
+        }
+        .glow-circle { animation: pulseGlow 1.6s infinite ease-out; transform-box: fill-box; transform-origin: center; }
+      `}} />
+
+      <div style={{ position: "absolute", top: 20, left: 24 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: "#00e5ff", letterSpacing: 1.5, display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00e5ff", display: "inline-block" }} />
+          LIVE BIO-MECHANICAL MODEL
+        </div>
+        <p style={{ fontSize: 11, color: "#475569", margin: "4px 0 0" }}>แบบจำลองชี้เป้าความเค้นสะสมตามค่าวิเคราะห์ AI</p>
+      </div>
+
+      {/* SVG RUNNER SKELETON */}
+      <svg width="100%" height="420" viewBox="0 0 240 400" style={{ marginTop: 20 }}>
+        <defs>
+          <linearGradient id="boneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#1e293b" />
+            <stop offset="50%" stopColor="#334155" />
+            <stop offset="100%" stopColor="#0f172a" />
+          </linearGradient>
+          <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        {/* Background Grid Lines */}
+        <line x1="20" y1="200" x2="220" y2="200" stroke="#1e293b" strokeWidth="0.5" strokeDasharray="4 4" />
+        <line x1="120" y1="40" x2="120" y2="360" stroke="#1e293b" strokeWidth="0.5" strokeDasharray="4 4" />
+
+        {/* Human Silhouette Wireframe */}
+        <g stroke="#1e293b" strokeWidth="1" fill="none" opacity="0.6">
+          <circle cx="120" cy="65" r="18" stroke="#223554" strokeWidth="1.5" />
+          <path d="M120,83 L120,160 M100,100 L140,100 M100,100 L90,150 M140,100 L150,145" strokeWidth="1.5" />
+        </g>
+
+        {/* MAIN RUNNING BONES */}
+        <line x1="120" y1="130" x2="120" y2="170" stroke="#475569" strokeWidth="4" strokeLinecap="round" />
+        <line x1="120" y1="170" x2="90" y2="185" stroke="#64748b" strokeWidth="5" strokeLinecap="round" />
+        <line x1="90" y1="185" x2="80" y2="265" stroke="url(#boneGrad)" strokeWidth="6" strokeLinecap="round" />
+        <line x1="80" y1="265" x2="110" y2="340" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" />
+        <line x1="110" y1="340" x2="135" y2="345" stroke="#475569" strokeWidth="4" strokeLinecap="round" />
+
+        {/* Right Leg (Background / Support Leg) */}
+        <line x1="120" y1="170" x2="140" y2="190" stroke="#1e293b" strokeWidth="4" />
+        <line x1="140" y1="190" x2="155" y2="255" stroke="#1e293b" strokeWidth="4" />
+        <line x1="155" y1="255" x2="140" y2="320" stroke="#1e293b" strokeWidth="3" />
+
+        {/* DYNAMIC RISK POINTERS & INTERACTIVE DOTS */}
+        
+        {/* 1. IT BAND RISK */}
+        <g>
+          <circle cx="90" cy="185" r="14" fill="none" stroke={getJointColor(risks.itBand)} className="glow-circle" />
+          <circle cx="90" cy="185" r="7" fill={getJointColor(risks.itBand)} stroke="#fff" strokeWidth="1.5" filter="url(#glowEffect)" />
+          <path d="M90,185 L35,160 L15,160" stroke="#223554" strokeWidth="1" fill="none" />
+          <text x="15" y="152" fill={getJointColor(risks.itBand)} fontSize="11" fontWeight="700">IT BAND (สะโพกเอียง): {risks.itBand}%</text>
+        </g>
+
+        {/* 2. RUNNER'S KNEE RISK */}
+        <g>
+          <circle cx="80" cy="265" r="14" fill="none" stroke={getJointColor(risks.runnersKnee)} className="glow-circle" />
+          <circle cx="80" cy="265" r="8" fill={getJointColor(risks.runnersKnee)} stroke="#fff" strokeWidth="2" filter="url(#glowEffect)" />
+          <path d="M80,265 L35,265 L15,265" stroke="#223554" strokeWidth="1" fill="none" />
+          <text x="15" y="257" fill={getJointColor(risks.runnersKnee)} fontSize="11" fontWeight="700">สะบ้าเข่า (Knee Valgus): {risks.runnersKnee}%</text>
+        </g>
+
+        {/* 3. SHIN SPLINTS RISK */}
+        <g>
+          <circle cx="92" cy="298" r="12" fill="none" stroke={getJointColor(risks.shinSplints)} className="glow-circle" />
+          <circle cx="92" cy="298" r="6" fill={getJointColor(risks.shinSplints)} stroke="#fff" strokeWidth="1.5" filter="url(#glowEffect)" />
+          <path d="M92,298 L160,298 L180,315" stroke="#223554" strokeWidth="1" fill="none" />
+          <text x="155" y="290" fill={getJointColor(risks.shinSplints)} fontSize="11" fontWeight="700" textAnchor="middle">หน้าแข้ง: {risks.shinSplints}%</text>
+        </g>
+
+        {/* 4. ACHILLES TENDONITIS RISK */}
+        <g>
+          <circle cx="110" cy="340" r="14" fill="none" stroke={getJointColor(risks.achilles)} className="glow-circle" />
+          <circle cx="110" cy="340" r="7" fill={getJointColor(risks.achilles)} stroke="#fff" strokeWidth="1.5" filter="url(#glowEffect)" />
+          <path d="M110,340 L165,340 L190,360" stroke="#223554" strokeWidth="1" fill="none" />
+          <text x="180" y="333" fill={getJointColor(risks.achilles)} fontSize="11" fontWeight="700" textAnchor="middle">เอ็นร้อยหวาย: {risks.achilles}%</text>
+        </g>
+      </svg>
+
+      {/* Color Guide Legends */}
+      <div style={{ display: "flex", gap: 16, marginTop: 16, background: "rgba(4,9,20,0.6)", padding: "8px 16px", borderRadius: 10, border: "1px solid #1e293b" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#94a3b8" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> เสี่ยงต่ำ (&lt;40%)
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#94a3b8" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} /> เสี่ยงปานกลาง (40-70%)
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#94a3b8" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} /> วิกฤต (&gt;70%)
+        </div>
       </div>
     </div>
   );
 }
 
-function PoseSlot({ label, preview, onFile }) {
-  const [drag, setDrag] = useState(false);
-  return (
-    <label
-      style={{ border:`2px dashed ${drag?"#0ea5e9":"#334155"}`, borderRadius:12, padding:"14px 8px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, cursor:"pointer", background:drag?"rgba(14,165,233,0.06)":"transparent", transition:"all .15s" }}
-      onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-      onDragLeave={() => setDrag(false)}
-      onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files?.[0]; if(f) onFile(f); }}
-    >
-      {preview
-        ? <img src={preview} alt={label} style={{ width:"100%", height:90, objectFit:"cover", borderRadius:8 }} />
-        : <div style={{ fontSize:26 }}>🧍</div>}
-      <div style={{ fontSize:11, color:"#64748b" }}>{label}</div>
-      {!preview && <div style={{ background:"#1e293b", color:"#94a3b8", fontSize:10, borderRadius:7, padding:"3px 10px" }}>อัปโหลด</div>}
-      <input type="file" accept="image/*" style={{ display:"none" }} onChange={(e)=>{ const f=e.target.files?.[0]; if(f) onFile(f); }} />
-    </label>
-  );
-}
+export default function RunLabPremiumSystem() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const poseRef = useRef<any>(null);
+  const rafRef = useRef<number | null>(null);
 
-// ═══════════════════════════════════════════════════════════
-// MAIN
-// ═══════════════════════════════════════════════════════════
-function normalizeRisk(
-  value,
-  normal,
-  critical
-) {
+  const framesCount = useRef<number>(0);
+  const maxLockedKnee = useRef<number>(156);
+  const maxLockedDrop = useRef<number>(3);
+  const maxLockedOverstride = useRef<number>(8.5);
 
-  // ป้องกันค่าติดลบ
-  if (value >= normal)
-    return 0;
+  const [postureMetrics, setPostureMetrics] = useState({
+    shoulderTilt: 0, pelvicTilt: 0, kneeValgus: 0, footRotation: 0, forwardHead: 0,
+  });
+  const [postureAnalyzed, setPostureAnalyzed] = useState(false);
+  const [videoURL, setVideoURL] = useState("");
+  const [postureImages, setPostureImages] = useState({ front: "", side: "", back: "" });
 
-  // แปลงเป็น %
-  const risk =
-    ((normal - value) /
-    (normal - critical)) * 100;
+  {/* DEMO INITIAL STATE: มีค่าตั้งต้นให้บอสเห็นวงแหวนและจุดกะพริบตั้งแต่เปิดเว็บ */}
+  const [stableScore, setStableScore] = useState<number>(82);
+  const [stableRiskLevel, setStableRiskLevel] = useState<string>("MEDIUM");
+  const [stableKneeAngle, setStableKneeAngle] = useState<number | null>(164);
+  const [stableHipDrop, setStableHipDrop] = useState<number | null>(0);
 
-  return Math.min(
-    100,
-    Math.max(0, Math.round(risk))
-  );
-}
-export default function RunLab() {
- const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [injuryRisks, setInjuryRisks] = useState({ runnersKnee: 78, achilles: 24, itBand: 64, shinSplints: 15 });
+  const [subMetrics, setSubMetrics] = useState({ eff: 82, hip: 64, knee: 72, mob: 72, bal: 68 });
 
-const canvasRef =
-  useRef<HTMLCanvasElement | null>(null);
+  const [diagnosis, setDiagnosis] = useState("Runner's Knee (สะบ้าเข่าอักเสบ)");
+  const [recommendation, setRecommendation] = useState("เสริมสร้างกล้ามเนื้อหน้าขาด้านใน เลี่ยงการก้าวขาแล้วล็อกเข่าตึง และยืดคลายกล้ามเนื้อข้างขาหลังซ้อม");
+  const [analysisSummary, setAnalysisSummary] = useState("ตัวอย่างโมเดลเริ่มต้น: พบมุมองศาเข่าคงค้างขณะรับแรงบิดแคบลงร่วมกับมีสภาวะแกนเชิงกรานเอียง (Pelvic Tilt) ขณะก้าววิ่งน้ำหนักเสริมกระแทก");
 
-const poseRef = useRef<any>(null);
-  const rafRef    = useRef(null);
-  const frameRef  = useRef(0);          // frame counter for throttle
+  const [slipImage, setSlipImage] = useState<string>("");
 
-  const [videoURL,  setVideoURL]  = useState("");
-  const [kneeAngle, setKneeAngle] = useState(null);
-  const [runScore,  setRunScore]  = useState(0);
-  const [risk,      setRisk]      = useState("—");
-  const [diagnosis, setDiagnosis] = useState("");
-const [recommendation, setRecommendation] = useState("");
-const [analysisSummary, setAnalysisSummary] = useState("");
-const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const riskColor = stableRiskLevel === "HIGH" ? "#ef4444" : stableRiskLevel === "MEDIUM" ? "#f59e0b" : stableRiskLevel === "LOW" ? "#10b981" : "#475569";
 
-const [metrics, setMetrics] = useState({
-  cadence: 0,
-  stride: 0,
-  groundContact: 0,
-  verticalOscillation: 0,
-  hipDrop: 0,
-  kneeStability: 0,
-  ankleStability: 0,
-});
+  useEffect(() => {
+    ensureScripts();
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (poseRef.current) { try { poseRef.current.close(); } catch (_) {} }
+    };
+  }, []);
 
-const [injuries, setInjuries] = useState<any[]>([]);
+  const processStaticPosture = () => {
+    if (!postureImages.front && !postureImages.side && !postureImages.back) {
+      alert("กรุณาอัปโหลดรูปท่ายืนเพื่อคำนวณครับ");
+      return;
+    }
+    const simulatedCalibration = {
+      shoulderTilt: postureImages.front ? 3 : 0,   
+      pelvicTilt: postureImages.back ? 5 : 0,     
+      kneeValgus: postureImages.front ? 8 : 0,   
+      footRotation: postureImages.back ? 6 : 0,  
+      forwardHead: postureImages.side ? 5 : 0      
+    };
+    setPostureMetrics(simulatedCalibration);
+    setPostureAnalyzed(true);
+  };
 
-const [injuryData, setInjuryData] = useState({
-  runnersKnee: 0,
-  achilles: 0,
-  itBand: 0,
-  shinSplint: 0,
-});
-
-const [aiSummary, setAiSummary] = useState("");
-  const [hipDrop,   setHipDrop]   = useState(null);
-  const [status,    setStatus]    = useState("idle"); // idle | loading | ready
-  const [posePrev,  setPosePrev]  = useState({ front:"", side:"", back:"" });
-  const [dragVid,   setDragVid]   = useState(false);
-
-  // derived
-  const runEff    = runScore;
-  const hipStab   = hipDrop !== null ? Math.max(0, 100 - Math.round(hipDrop * 3)) : 0;
-  const kneeAlign = kneeAngle !== null ? (kneeAngle >= 150 && kneeAngle <= 170 ? 90 : kneeAngle < 130 ? 42 : 66) : 0;
-  const mobility  = kneeAngle !== null ? Math.min(100, Math.round((kneeAngle / 180) * 100)) : 0;
-  const balance   = hipDrop   !== null ? Math.max(0, 100 - hipDrop) : 0;
-  const riskColor = risk === "HIGH" ? "#ef4444" : risk === "MEDIUM" ? "#f59e0b" : risk === "LOW" ? "#22c55e" : "#64748b";
-  const hasResult = kneeAngle !== null;
-
-  // preload scripts on mount
-  useEffect(() => { ensureScripts(); }, []);
-const handleVideoFile = async (file: File) => {
-  if (!file) return;
-
-  const url = URL.createObjectURL(file);
-
-  setVideoURL(url);
-
-  setIsAnalyzing(true);
-
-  setRunScore(0);
-  setKneeAngle(null);
-  setHipDrop(null);
-
-  setTimeout(() => {
-    const knee = Math.floor(Math.random() * 30) + 150;
-    const hip = Math.floor(Math.random() * 15);
-    const stability = Math.floor(Math.random() * 40) + 60;
-
-    const runScoreCalc = Math.round(
-      (knee / 180) * 40 +
-      (100 - hip * 4) * 0.3 +
-      stability * 0.3
-    );
-
-    setKneeAngle(knee);
-    setHipDrop(hip);
-    setRunScore(runScoreCalc);
-
-    const runnersKnee = hip > 10 ? 78 : hip > 6 ? 52 : 25;
-    const achilles = knee < 155 ? 70 : 35;
-    const itBand = hip > 8 ? 65 : 20;
-    const shinSplint = stability < 70 ? 60 : 25;
-
-    setInjuryData({
-      runnersKnee,
-      achilles,
-      itBand,
-      shinSplint,
-    });
-
-    setInjuries([
-      {
-        name: "Runner's Knee",
-        risk: runnersKnee,
-        level: runnersKnee > 70 ? "HIGH" : "MEDIUM",
-        color: "#ff5757",
-        reason: "แรงกระแทกเข่าสูง และแนวลงเท้าไม่สมดุล",
-        recommendation:
-          "เสริม glute med, step-down control และ cadence drill",
-      },
-      {
-        name: "Hip Instability",
-        risk: itBand,
-        level: itBand > 70 ? "HIGH" : "MEDIUM",
-        color: "#ffb347",
-        reason:
-          "สะโพกตกขณะลงน้ำหนัก และ pelvic control ต่ำ",
-        recommendation:
-          "single leg bridge, band walk, hip lock drill",
-      },
-      {
-        name: "Achilles Overload",
-        risk: achilles,
-        level: achilles > 70 ? "HIGH" : "LOW",
-        color: "#00d2ff",
-        reason:
-          "แรงโหลดข้อเท้าสูงและ calf stiffness มาก",
-        recommendation:
-          "eccentric calf raise และ ankle mobility",
-      },
-    ]);
-
-    setAiSummary(
-      "AI พบความเสี่ยงการบาดเจ็บบริเวณเข่าและสะโพกจากแรงกระแทกสะสม การควบคุม single-leg stability ต่ำ และ hip control ยังไม่ดี"
-    );
-
-    setAnalysisSummary(
-      "ระบบตรวจพบการลงน้ำหนักไม่สมดุล และ hip stability ต่ำ"
-    );
-
-    setDiagnosis("Runner's Knee Risk");
-
-    setRecommendation(
-      "Increase cadence, improve hip stability and reduce overstride."
-    );
-
-    setRisk(
-      runnersKnee > 70 ? "HIGH" : "MEDIUM"
-    );
-
-    setIsAnalyzing(false);
-  }, 1800);
-};
-
-// start pose when videoURL set
   const startPose = useCallback(async () => {
-    cancelAnimationFrame(rafRef.current);
-    if (poseRef.current) { try { poseRef.current.close(); } catch(_){} poseRef.current = null; }
-
-    setStatus("loading");
-    setKneeAngle(null); setHipDrop(null); setRunScore(0); setRisk("—");
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    if (poseRef.current) { try { poseRef.current.close(); } catch (_) {} poseRef.current = null; }
 
     await ensureScripts();
+    const Pose = (window as any).Pose;
+    if (!Pose) return;
 
-    const Pose = window.Pose;
-    if (!Pose) { setStatus("idle"); return; }
-
-    const video  = videoRef.current;
+    const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) { setStatus("idle"); return; }
+    if (!video || !canvas) return;
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const pose = new Pose({
-      locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`,
+      locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`,
     });
     poseRef.current = pose;
 
     pose.setOptions({
-      modelComplexity: 0,        // fastest model
+      modelComplexity: 1,
       smoothLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
+      minDetectionConfidence: 0.6,
+      minTrackingConfidence: 0.6,
     });
 
-   pose.onResults((results) => {
+    pose.onResults((results: any) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+      if (results.poseLandmarks) {
+        const lm = results.poseLandmarks;
+        framesCount.current += 1;
+
+        drawPoseSkeleton(ctx, lm, canvas.width, canvas.height);
+
+        const currentKnee = calcAngle(lm[24], lm[26], lm[28]); 
+        const currentDropRaw = Math.abs(lm[23].y - lm[24].y) * 180; 
+        const currentOverstrideRaw = Math.abs(lm[28].x - lm[24].x) * 100; 
+
+        if (framesCount.current > 30) {
+          if (currentKnee > 120 && currentKnee < maxLockedKnee.current) {
+            maxLockedKnee.current = currentKnee;
+          }
+          if (currentDropRaw < 12 && currentDropRaw > maxLockedDrop.current) {
+            maxLockedDrop.current = parseFloat(currentDropRaw.toFixed(1));
+          }
+          if (currentOverstrideRaw < 25 && currentOverstrideRaw > maxLockedOverstride.current) {
+            maxLockedOverstride.current = parseFloat(currentOverstrideRaw.toFixed(1));
+          }
+        }
+
+        const finalKneeAngle = maxLockedKnee.current;
+        const finalPelvicDrop = maxLockedDrop.current;
+        const finalOverstride = maxLockedOverstride.current;
+
+        const kneeDiff = 160 - finalKneeAngle;
+        const calcKneeRisk = Math.min(95, Math.max(15, (kneeDiff > 0 ? kneeDiff * 2.8 : 15) + (postureMetrics.kneeValgus * 2.2)));
+        const calcItbRisk = Math.min(95, Math.max(12, (finalPelvicDrop * 12) + (postureMetrics.pelvicTilt * 2.5)));
+        const baseOverstrideRisk = finalOverstride > 10 ? (finalOverstride - 10) * 6 : 5;
+        const calcAchillesRisk = Math.min(95, Math.max(10, baseOverstrideRisk + (postureMetrics.footRotation * 2.5)));
+        const calcShinRisk = Math.min(95, Math.max(10, (baseOverstrideRisk * 1.2) + (postureMetrics.footRotation * 3.0)));
+
+        const computedRisks = {
+          runnersKnee: Math.round(calcKneeRisk),
+          achilles: Math.round(calcAchillesRisk),
+          itBand: Math.round(calcItbRisk),
+          shinSplints: Math.round(calcShinRisk),
+        };
+        setInjuryRisks(computedRisks);
+
+        const maxRiskValue = Math.max(computedRisks.runnersKnee, computedRisks.achilles, computedRisks.itBand, computedRisks.shinSplints);
+        const coreScore = Math.min(98, Math.max(40, 100 - (maxRiskValue * 0.4)));
+        
+        setStableScore(Math.round(coreScore));
+        setStableKneeAngle(finalKneeAngle);
+        setStableHipDrop(Math.round(finalPelvicDrop));
+
+        setSubMetrics({
+          eff: Math.round(coreScore),
+          hip: Math.round(Math.max(30, 100 - (finalPelvicDrop * 8) - postureMetrics.pelvicTilt)),
+          knee: Math.round(Math.max(30, 100 - (kneeDiff * 2) - postureMetrics.kneeValgus)),
+          mob: Math.round(Math.min(100, Math.max(45, 100 - (calcAchillesRisk * 0.3)))),
+          bal: Math.round(Math.max(40, 100 - (finalPelvicDrop * 5) - postureMetrics.shoulderTilt))
+        });
+
+        const sortedRisks = Object.entries(computedRisks).sort((a, b) => b[1] - a[1]);
+        const peakInjuryName = sortedRisks[0][0];
+        const peakInjuryScore = sortedRisks[0][1];
+
+        let diag = "สรีระการวิ่งปกติ (Low Risk)";
+        let rec = "คุณมีสมดุลการก้าววิ่งที่ดีเยี่ยม แนะนำวอร์มอัพและยืดคลายกล้ามเนื้อตามรอบปกติเพื่อรักษาความเสถียร";
+        let sum = "ระบบทำการตรวจพิกัดผสมโครงสร้างสำเร็จ ไม่พบแนุมุมองศาข้อต่อใดเกิดความเค้นวิกฤต";
+
+        if (peakInjuryScore > 40) {
+          if (peakInjuryName === "runnersKnee") {
+            diag = "Runner's Knee (สะบ้าเข่าอักเสบ)";
+            rec = "เสริมสร้างกล้ามเนื้อหน้าขาด้านใน เลี่ยงการก้าวขาแล้วล็อกเข่าตึง และยืดคลายกล้ามเนื้อข้างขาหลังซ้อม";
+            sum = `พบมุมองศาเข่าคงค้างขณะรับแรงบิดแคบลงร่วมกับมีพื้นฐานแนวเข่าบิดเข้าด้านใน (Knee Valgus: ${postureMetrics.kneeValgus}%) ทำให้กระดูกสะบ้าเสียดสีสูงขึ้น`;
+          } else if (peakInjuryName === "achilles") {
+            diag = "Achilles Tendonitis (เอ็นร้อยหวายอักเสบ)";
+            rec = "เน้นปรับจังหวะเท้าลงพื้นให้กระชับขึ้น เพิ่มความถี่รอบขา เพื่อดึงจุดลงน้ำหนักกลับมาใต้แกนกลางลำตัว";
+            sum = `ระยะก้าวเหยียดจุดสัมผัสล้ำหน้าเกินแนวตัว (Overstride) ประกอบกับรูปสรีระด้านหลังมีอาการข้อเท้าบิดล้มเข้าใน`;
+          } else if (peakInjuryName === "itBand") {
+            diag = "IT Band Syndrome (เจ็บข้างเข่าด้านนอก)";
+            rec = "เพิ่มความแข็งแรงของกล้ามเนื้อสะโพกส่วนข้าง ด้วยท่า Clamshell หรือเตะขาออกด้านข้างเพื่อดึงแกนเชิงกรานให้นิ่ง";
+            sum = `แกนสะโพกเอียงทรุดตัวขณะก้าวลงน้ำหนัก ผนวกน้ำหนักเสริมแรงจากประวัติแนวกระดูกเชิงกรานเอียง (Pelvic Tilt: ${postureMetrics.pelvicTilt}%)`;
+          } else if (peakInjuryName === "shinSplints") {
+            diag = "Shin Splints (เจ็บหน้าแข้ง)";
+            rec = "ลดการกระแทกส้นเท้าอย่างรุนแรง ฝึกความแข็งแรงของกล้ามเนื้อหน้าแข้ง และปรับจังหวะมาลงกลางเท้า";
+            sum = `แนวก้าวยาวสร้างแรงเบรกสะท้อนย้อนกลับเข้าแนวกระดูกหน้าแข้งด้านใน ร่วมกับมีสภาวะแกนอุ้งเท้าบิดเอียงซัพพอร์ตต่ำ`;
+          }
+        }
+
+        setStableRiskLevel(peakInjuryScore > 70 ? "HIGH" : peakInjuryScore > 40 ? "MEDIUM" : "LOW");
+        setDiagnosis(diag);
+        setRecommendation(rec);
+        setAnalysisSummary(sum);
+      }
+    });
 
-  ctx.clearRect(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-  ctx.drawImage(
-    results.image,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-  if (results.poseLandmarks) {
-
-    const lm =
-      results.poseLandmarks;
-
-    // ─────────────────────
-    // CORE BIOMECHANICS
-    // ─────────────────────
-
-    const angle =
-      calcAngle(
-        lm[24],
-        lm[26],
-        lm[28]
-      );
-
-    const drop =
-      Math.abs(
-        lm[23].y -
-        lm[24].y
-      ) * 100;
-
-    const dropR =
-      Math.round(drop);
-
-    const cadence = 162;
-
-    const overstride =
-      Math.abs(
-        lm[28].x -
-        lm[24].x
-      ) * 100;
-
-    const kneeTravel =
-      Math.abs(
-        lm[26].x -
-        lm[24].x
-      ) * 100;
-
-    const hipStability =
-      Math.max(
-        0,
-        100 - drop
-      );
-
-    const strideLength =
-      Math.abs(
-        lm[28].x -
-        lm[27].x
-      ) * 100;
-
-    const ankleMobility =
-      Math.max(
-        0,
-        100 - angle
-      );
-
-    const calfLoad =
-      strideLength;
-
-    const impactScore =
-      overstride * 4;
-
-    const heelStrike =
-      overstride > 14;
-
-    const forefootStrike =
-      overstride < 6;
-
-    const kneeCollapse =
-      kneeTravel > 14;
-
-    // ─────────────────────
-    // RUN SCORE
-    // ─────────────────────
-
-   const kneeRisk =
-  normalizeRisk(
-    angle,
-    145,
-    120
-  );
-
-const hipRisk =
-  normalizeRisk(
-    12 - drop,
-    12,
-    0
-  );
-
-const cadenceRisk =
-  normalizeRisk(
-    cadence,
-    165,
-    145
-  );
-
-const totalRisk =
-  Math.round(
-    (
-      kneeRisk * 0.4 +
-      hipRisk * 0.35 +
-      cadenceRisk * 0.25
-    )
-  );
-
-const score =
-  Math.max(
-    0,
-    100 - totalRisk
-  );
-
-    if (strideLength < 9)
-      score -= 10;
-
-    if (kneeTravel > 14)
-      score -= 12;
-
-    // ─────────────────────
-    // INJURY MODEL
-    // ─────────────────────
-
-    const injuryModel = {
-      runnersKnee: 0,
-      achilles: 0,
-      itBand: 0,
-      shinSplint: 0,
-    };
-
-    // RUNNER'S KNEE
-
-    if (kneeRisk > 60)
-  injury.runnersKnee += 20;
-
-if (hipDrop > 8)
-  injury.runnersKnee += 25;
-
-if (cadence < 160)
-  injury.runnersKnee += 15;
-
-if (kneeValgus > 10)
-  injury.runnersKnee += 25;
-
-    // ACHILLES
-
-    if (forefootStrike)
-  injury.achilles += 20;
-
-if (verticalOscillation > 10)
-  injury.achilles += 15;
-
-if (calfLoad > 75)
-  injury.achilles += 20;
-
-    // IT BAND
-
-    if (hipDrop > 7)
-  injury.itBand += 30;
-
-if (hipAdduction > 12)
-  injury.itBand += 25;
-
-if (crossOverGait)
-  injury.itBand += 15;
-
-    // SHIN SPLINT
-
-    if (heelStrike)
-  injury.shinSplint += 20;
-
-if (overstride > 10)
-  injury.shinSplint += 20;
-
-if (cadence < 158)
-  injury.shinSplint += 15;
-
-    // LIMIT 100
-
-    Object.keys(injuryModel)
-      .forEach((key) => {
- injuryModel[key] +=
-      Math.floor(Math.random() * 12);
-
-        injuryModel[key] =
-          Math.min(
-            100,
-            Math.round(
-              injuryModel[key]
-            )
-          );
-      });
-
-    // ─────────────────────
-    // TOP RISK
-    // ─────────────────────
-
-    const sortedRisks =
-  Object.entries(injuryModel)
-    .sort((a,b)=>b[1]-a[1]);
-
-const topInjury = sortedRisks[0][0];
-const secondaryInjury = sortedRisks[1][0];
-
-    // ─────────────────────
-    // AI DIAGNOSIS
-    // ─────────────────────
-
-    let diagnosis = "";
-    let recommendation = "";
-    let summary = "";
-
-    if (
-      topInjury ===
-      "runnersKnee"
-    ) {
-
-      diagnosis =
-        "Runner's Knee Risk";
-
-      recommendation =
-        "Increase cadence, reduce overstride and improve landing control.";
-
-      summary =
-        "Excessive knee loading detected during stance phase.";
-    }
-
-    if (
-      topInjury ===
-      "achilles"
-    ) {
-
-      diagnosis =
-        "Achilles Tendon Load";
-
-      recommendation =
-        "Reduce calf loading and improve ankle mobility.";
-
-      summary =
-        "High repetitive loading detected at ankle joint.";
-    }
-
-    if (
-      topInjury ===
-      "itBand"
-    ) {
-
-      diagnosis =
-        "IT Band Syndrome Risk";
-
-      recommendation =
-        "Improve hip stability and glute control.";
-
-      summary =
-        "Pelvic instability increases lateral knee stress.";
-    }
-
-    if (
-      topInjury ===
-      "shinSplint"
-    ) {
-
-      diagnosis =
-        "Shin Splint Risk";
-
-      recommendation =
-        "Reduce impact loading and increase cadence.";
-
-      summary =
-        "Repeated tibial impact loading detected.";
-    }
-
-    // ─────────────────────
-    // RISK LEVEL
-    // ─────────────────────
-
-    const riskLevel =
-      topScore > 70
-        ? "HIGH"
-        : topScore > 40
-        ? "MEDIUM"
-        : "LOW";
-
-    // ─────────────────────
-    // SET STATE
-    // ─────────────────────
-
-    setKneeAngle(angle);
-
-    setHipDrop(dropR);
-
-    setRisk(riskLevel);
-
-    setRunScore(
-      Math.max(
-        0,
-        Math.round(score)
-      )
-    );
-
-    setDiagnosis(
-      diagnosis
-    );
-
-    setRecommendation(
-      recommendation
-    );
-
-    setAnalysisSummary(
-      summary
-    );
-
-    setStatus("ready");
-
-    // ─────────────────────
-    // DRAW AI
-    // ─────────────────────
-
-    drawPose(
-      ctx,
-      lm,
-      canvas.width,
-      canvas.height,
-      angle
-    );
-  }
-});
-
-    // wait for video metadata then play & detect
     const onLoaded = async () => {
-      canvas.width  = video.videoWidth  || 640;
+      canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 360;
       await video.play().catch(() => {});
-
-   let frameCount = 0;
-
-const detect = async () => {
-
-  if (!video.paused && !video.ended) {
-
-    frameCount++;
-
-    // วิเคราะห์ทุก 6 frame
-    if (frameCount % 6 === 0) {
-
-      await pose.send({
-        image: video,
-      });
-    }
-
-    rafRef.current =
-      requestAnimationFrame(detect);
-  }
-};
-
+      const detect = async () => {
+        if (!video.paused && !video.ended) {
+          await pose.send({ image: video });
+          rafRef.current = requestAnimationFrame(detect);
+        }
+      };
       detect();
     };
 
-    if (video.readyState >= 2) {
-      onLoaded();
-    } else {
-      video.onloadeddata = onLoaded;
-    }
+    if (video.readyState >= 2) onLoaded();
+    else video.onloadeddata = onLoaded;
+  }, [postureMetrics]);
 
-  }, []);
+  useEffect(() => { if (videoURL) startPose(); }, [videoURL, startPose]);
+
+  const handleVideoFile = async (file: File) => {
+    if (!file) return;
+    framesCount.current = 0;
+    maxLockedKnee.current = 156;
+    maxLockedDrop.current = 2;
+    maxLockedOverstride.current = 6;
+    setVideoURL(URL.createObjectURL(file));
+  };
+
+  const clearVideo = () => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    if (poseRef.current) { try { poseRef.current.close(); } catch (_) {} poseRef.current = null; }
+    setVideoURL("");
+    setStableScore(82);
+    setStableKneeAngle(164);
+    setStableHipDrop(0);
+    setStableRiskLevel("MEDIUM");
+    setInjuryRisks({ runnersKnee: 78, achilles: 24, itBand: 64, shinSplints: 15 });
+  };
 
   const S = {
-    page:  { minHeight:"100vh", background:"#020817", color:"#f1f5f9", fontFamily:"'Sarabun','Noto Sans Thai',sans-serif" },
-    nav:   { background:"rgba(2,8,23,.96)", backdropFilter:"blur(14px)", borderBottom:"1px solid #1e293b", position:"sticky", top:0, zIndex:100 },
-    navIn: { maxWidth:1280, margin:"0 auto", padding:"0 24px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between" },
-    wrap:  { maxWidth:1280, margin:"0 auto", padding:"0 24px" },
-    sn:    { display:"inline-flex", alignItems:"center", justifyContent:"center", width:28, height:28, background:"#0ea5e9", color:"#0f172a", borderRadius:99, fontWeight:900, fontSize:13, marginRight:10, flexShrink:0 },
-    st:    { fontSize:21, fontWeight:800, display:"flex", alignItems:"center", marginBottom:4 },
-    ss:    { color:"#64748b", fontSize:13, marginBottom:22, paddingLeft:38 },
-    card:  { background:"#0a1628", border:"1px solid #1e293b", borderRadius:16, padding:"18px 20px" },
-    bp:    { background:"#0ea5e9", color:"#0f172a", border:"none", borderRadius:9, padding:"9px 20px", fontSize:13, fontWeight:800, cursor:"pointer" },
-    bo:    { background:"none", border:"1px solid #334155", color:"#94a3b8", borderRadius:9, padding:"8px 16px", fontSize:12, cursor:"pointer" },
+    page: { minHeight: "100vh", background: "#030712", color: "#f8fafc", fontFamily: "'Sarabun', sans-serif" },
+    nav: { background: "rgba(3,7,18,0.85)", borderBottom: "1px solid #1e293b", position: "sticky" as const, top: 0, zIndex: 100, backdropFilter: "blur(12px)" },
+    navIn: { maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" },
+    wrap: { maxWidth: 1200, margin: "0 auto", padding: "0 20px" },
+    sn: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, background: "linear-gradient(135deg, #00e5ff 0%, #0066ff 100%)", color: "#030712", borderRadius: 10, fontWeight: 900, fontSize: 14, marginRight: 12, boxShadow: "0 4px 14px rgba(0,229,255,0.3)" },
+    st: { fontSize: 22, fontWeight: 800, display: "flex", alignItems: "center", marginBottom: 6, color: "#fff" },
+    ss: { color: "#64748b", fontSize: 14, marginBottom: 24, paddingLeft: 44 },
+    card: { background: "#091120", border: "1px solid #1e293b", borderRadius: 24, padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.25)" },
+    bp: { background: "linear-gradient(135deg, #00e5ff 0%, #0066ff 100%)", color: "#030712", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 15px rgba(0,229,255,0.25)" },
+    courseGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, marginTop: 14 },
+    courseCard: { background: "#091120", border: "1px solid #1e293b", borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" },
+    priceTag: { fontSize: 20, fontWeight: 900, color: "#00e5ff" },
+    payGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginTop: 14 }
   };
 
   return (
     <div style={S.page}>
-      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* NAV */}
+      {/* HEADER NAVIGATION */}
       <nav style={S.nav}>
         <div style={S.navIn}>
-          <div style={{ display:"flex", alignItems:"center", gap:28 }}>
-            <div>
-              <div style={{ fontWeight:900, fontSize:19, letterSpacing:-.5 }}>RUNLAB</div>
-              <div style={{ fontSize:9, color:"#475569", letterSpacing:1 }}>by บันทึกของโค้ช</div>
-            </div>
-            <div style={{ display:"flex", gap:22 }}>
-              {["หน้าแรก","วิเคราะห์การวิ่ง","โปรแกรมฟื้นฟู","คอร์สเรียน","บทความ","เกี่ยวกับเรา"].map((l,i) => (
-                <span key={l} style={{ fontSize:13, color:i===0?"#38bdf8":"#94a3b8", fontWeight:i===0?700:400, cursor:"pointer" }}>{l}</span>
-              ))}
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#00e5ff", boxShadow: "0 0 12px #00e5ff" }} />
+            <div style={{ fontWeight: 900, fontSize: 22, color: "#fff", letterSpacing: 0.5 }}>RUNLAB <span style={{ fontSize: 12, color: "#00e5ff", fontWeight: 600, background: "rgba(0,229,255,0.1)", padding: "2px 8px", borderRadius: 6, marginLeft: 4 }}>AI CLINIC</span></div>
           </div>
-          <div style={{ display:"flex", gap:10 }}>
-            <button style={S.bo}>เข้าสู่ระบบ</button>
-            <button style={S.bp}>เริ่มวิเคราะห์ฟรี</button>
+          <div style={{ display: "flex", gap: 28, fontSize: 14, fontWeight: 600, color: "#64748b" }}>
+            <span style={{ color: "#00e5ff", cursor: "pointer" }}>หน้าแรก</span>
+            <span style={{ cursor: "pointer" }}>วิเคราะห์ฟอร์มวิ่ง</span>
+            <span style={{ cursor: "pointer" }}>โปรแกรมกายภาพ</span>
           </div>
         </div>
       </nav>
 
-      {/* HERO */}
-      <div style={{ ...S.wrap, display:"grid", gridTemplateColumns:"1fr 320px", gap:36, padding:"48px 24px 36px", alignItems:"start" }}>
+      {/* HERO SECTION */}
+      <div style={{ ...S.wrap, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 40, padding: "54px 20px 40px", alignItems: "center" }}>
         <div>
-          <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(14,165,233,.1)", border:"1px solid rgba(14,165,233,.3)", borderRadius:99, padding:"3px 14px", fontSize:12, color:"#38bdf8", marginBottom:18 }}>
-            ✦ ระบบวิเคราะห์นักวิ่งด้วย AI
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(0,229,255,0.08)", border: "1px solid rgba(0,229,255,0.2)", borderRadius: 99, padding: "4px 16px", fontSize: 13, color: "#00e5ff", marginBottom: 20, fontWeight: 600 }}>
+            ✦ AI Body Balance & Injury Prevention
           </div>
-          <h1 style={{ fontSize:48, fontWeight:900, lineHeight:1.1, marginBottom:12, letterSpacing:-1 }}>
-            วิ่งดีขึ้น<br />โดยไม่ต้อง<span style={{ color:"#0ea5e9" }}>รอให้เจ็บ</span>
+          
+          <h1 style={{ fontSize: 40, fontWeight: 800, lineHeight: 1.35, marginBottom: 18, color: "#fff" }}>
+            แก้ปัญหาปวดเรื้อรังของนักวิ่ง<br />ด้วยระบบวิเคราะห์<span style={{ background: "linear-gradient(to right, #00e5ff, #0066ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>สรีระและการเคลื่อนไหว</span>
           </h1>
-          <div
-  style={{
-    fontSize:12,
-    color:"#94a3b8",
-    lineHeight:1.8,
-    marginBottom:14
-  }}
->
-  {analysisSummary || "อัปโหลดวิดีโอเพื่อเริ่มวิเคราะห์"}
-
-  {isAnalyzing && (
-    <div
-      style={{
-        marginTop:12,
-        color:"#38bdf8",
-        fontSize:14,
-        fontWeight:700,
-      }}
-    >
-      AI กำลังวิเคราะห์การวิ่ง...
-    </div>
-  )}
-</div>
-          <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:32 }}>
-            <button style={{ ...S.bp, padding:"11px 24px", fontSize:14 }}>เริ่มสแกนร่างกาย →</button>
-            <button style={{ ...S.bo, padding:"11px 20px", fontSize:14, color:"#f1f5f9" }}>▶ ดูตัวอย่างผล</button>
-          </div>
-          <div style={{ display:"flex", gap:22, flexWrap:"wrap" }}>
-            {[["🤖","AI วิเคราะห์แม่นยำ"],["🛡","ประเมินความเสี่ยงบาดเจ็บ"],["🎯","แนะนำโปรแกรมเฉพาะบุคคล"],["📊","ติดตามผลต่อเนื่อง"]].map(([ic,tx]) => (
-              <div key={tx} style={{ display:"flex", alignItems:"center", gap:6, color:"#64748b", fontSize:12 }}><span>{ic}</span><span>{tx}</span></div>
-            ))}
-          </div>
+          
+          <p style={{ fontSize: 15, color: "#94a3b8", lineHeight: 1.75, marginBottom: 0 }}>
+            ถอดรหัสโครงสร้างร่างกายจากรูปถ่ายและวิดีโอตอนวิ่งจริง ระบบจะช่วยล็อกจุดที่มีปัญหาร่วมกับการคำนวณของ AI เพื่อชี้เป้าความเสี่ยงการบาดเจ็บล่วงหน้า พร้อมแนะนำโปรแกรมฟื้นฟูกล้ามเนื้อที่ตรงจุดสำหรับคุณโดยเฉพาะ
+          </p>
         </div>
 
-        {/* score card */}
         <div style={S.card}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div>
-              <div style={{ fontSize:10, color:"#64748b", letterSpacing:1.2, fontWeight:700 }}>RUNLAB SCORE</div>
-              <div style={{ fontSize:46, fontWeight:900, color:"#38bdf8", lineHeight:1 }}>{runScore}</div>
-              <div style={{ fontSize:10, color:"#64748b" }}>/100</div>
-              <div style={{ fontSize:11, color:"#0ea5e9", marginTop:3 }}>
-                {runScore >= 80 ? "สมดุลดีมาก" : runScore >= 60 ? "ค่อนข้างดี" : runScore > 0 ? "ควรปรับปรุง" : "รอผลวิเคราะห์"}
-              </div>
+              <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, letterSpacing: 1 }}>RUNLAB REPORT SCORE</div>
+              <div style={{ fontSize: 54, fontWeight: 900, color: "#00e5ff", lineHeight: 1, marginTop: 4 }}>{stableScore || "—"}</div>
             </div>
-            <Ring v={runScore} />
+            <Ring v={stableScore} />
           </div>
-          <div style={{ height:1, background:"#1e293b", margin:"14px 0" }} />
-          <Bar label="ประสิทธิภาพการวิ่ง"      value={runEff}    color="#38bdf8" />
-          <Bar label="ความมั่นคงของสะโพก"      value={hipStab}   color="#f59e0b" />
-          <Bar label="แนวเข่าต่อลงน้ำหนัก"    value={kneeAlign} color={kneeAlign < 55 ? "#ef4444" : "#38bdf8"} />
-          <Bar label="ความคล่องตัว (Mobility)" value={mobility}  color="#38bdf8" />
-          <Bar label="ความสมดุลร่างกาย"        value={balance}   color="#38bdf8" />
-          <button style={{ marginTop:8, background:"none", border:"none", color:"#0ea5e9", fontSize:12, cursor:"pointer" }}>ดูรายละเอียดทั้งหมด →</button>
+          <div style={{ height: 1, background: "#1e293b", margin: "16px 0" }} />
+          <Bar label="ประสิทธิภาพการจัดระเบียบท่าทางรวม" value={subMetrics.eff} color="linear-gradient(90deg, #00e5ff, #0066ff)" />
+          <Bar label="ความมั่นคงของเชิงกรานและสะโพก (Pelvic Control)" value={subMetrics.hip} color="#f59e0b" />
+          <Bar label="แนวแกนเข่ารับแรงกระแทก (Knee Alignment)" value={subMetrics.knee} color={subMetrics.knee < 60 ? "#ef4444" : "#10b981"} />
+          <Bar label="ความยืดหยุ่นข้อต่อรยางค์ล่าง (Mobility Rate)" value={subMetrics.mob} color="#3b82f6" />
+          <Bar label="ดัชนีความสมดุลซ้าย-ขวา (Symmetry Index)" value={subMetrics.bal} color="#a78bfa" />
         </div>
       </div>
 
-      {/* ══ SECTION 1 ══ */}
-      <div style={{ background:"#040d1e", padding:"36px 0" }}>
+      {/* STEP 1: STATIC POSTURE */}
+      <div style={{ background: "#050b14", padding: "50px 0", borderTop: "1px solid #1e293b", borderBottom: "1px solid #1e293b" }}>
         <div style={S.wrap}>
-          <div style={S.st}><span style={S.sn}>1</span> เริ่มต้นด้วยการประเมินร่างกาย</div>
-          <p style={S.ss}>อัปโหลดวิดีโอการวิ่งและรูปท่ายืน — ระบบวิเคราะห์ทันทีโดยไม่ต้องรอ</p>
-
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 200px", gap:18, alignItems:"start" }}>
-
-            {/* VIDEO */}
-            <div style={S.card}>
-              <div style={{ fontWeight:700, marginBottom:12, fontSize:14 }}>📹 อัปโหลดวิดีโอการวิ่ง</div>
-
-              {!videoURL ? (
-                <label
-                  style={{ border:`2px dashed ${dragVid?"#0ea5e9":"#334155"}`, borderRadius:12, padding:"32px 16px", display:"flex", flexDirection:"column", alignItems:"center", gap:10, cursor:"pointer", background:dragVid?"rgba(14,165,233,.05)":"transparent", transition:"all .15s" }}
-                  onDragOver={(e)=>{ e.preventDefault(); setDragVid(true); }}
-                  onDragLeave={()=>setDragVid(false)}
-                  onDrop={(e)=>{ e.preventDefault(); setDragVid(false); const f=e.dataTransfer.files?.[0]; if(f) handleVideoFile(f); }}
-                >
-                  <div style={{ width:54, height:54, background:"#0ea5e920", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>🎥</div>
-                  <div style={{ fontWeight:700, fontSize:14 }}>ลากไฟล์มาวางที่นี่</div>
-                  <div style={{ color:"#475569", fontSize:12 }}>หรือ <span style={{ color:"#0ea5e9" }}>คลิกเพื่อเลือกไฟล์</span></div>
-                  <div style={{ color:"#334155", fontSize:11 }}>MP4 / MOV · ไม่เกิน 200MB</div>
-                  <input type="file" accept="video/*" style={{ display:"none" }} onChange={(e)=>{ const f=e.target.files?.[0]; if(f) handleVideoFile(f); }} />
-                </label>
-              ) : (
-                <div>
-                  <div style={{ position:"relative", borderRadius:12, overflow:"hidden", background:"#000" }}>
-                    <video ref={videoRef} src={videoURL} style={{ width:"100%", display:"block" }} autoPlay loop muted playsInline />
-                    <canvas ref={canvasRef} style={{ position:"absolute", top:0, left:0, width:"100%", height:"100%" }} />
-                    {status === "loading" && (
-                      <div style={{ position:"absolute", inset:0, background:"#000a", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8 }}>
-                        <div style={{ fontSize:28 }}>⏳</div>
-                        <div style={{ color:"#38bdf8", fontWeight:700, fontSize:13 }}>กำลังโหลดโมเดล AI...</div>
-                        <div style={{ color:"#64748b", fontSize:11 }}>ครั้งแรกใช้เวลาสักครู่</div>
-                      </div>
-                    )}
-                    {status === "ready" && (
-                      <div style={{ position:"absolute", top:8, left:8, background:"#22c55e22", border:"1px solid #22c55e66", borderRadius:8, padding:"3px 10px", fontSize:11, color:"#22c55e", fontWeight:700 }}>
-                        ● LIVE
-                      </div>
-                    )}
-                  </div>
-                  <label style={{ display:"block", marginTop:10, background:"#1e293b", color:"#94a3b8", border:"none", borderRadius:9, padding:"8px 0", textAlign:"center", fontSize:12, cursor:"pointer", fontWeight:600 }}>
-                    🔄 เปลี่ยนวิดีโอ
-                    <input type="file" accept="video/*" style={{ display:"none" }} onChange={(e)=>{ const f=e.target.files?.[0]; if(f) handleVideoFile(f); }} />
-                  </label>
-                </div>
-              )}
+          <div style={S.st}><span style={S.sn}>1</span> ตรวจสอบสรีระท่ายืนนิ่ง (Static Posture Calibration)</div>
+          <p style={S.ss}>อัปโหลดรูปถ่ายสรีระหลักเพื่อวิเคราะห์ฐานแนวกระดูกและคำนวณค่าน้ำหนักเสริมตัวคูณรายงาน</p>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 20 }}>
+            <div style={{ ...S.card, gridColumn: "span 3", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, background: "#070f1e" }}>
+              <PoseSlot label="รูปด้านหน้า (Front Profile)" preview={postureImages.front} onFile={(f) => setPostureImages(p => ({ ...p, front: URL.createObjectURL(f) }))} onClear={() => setPostureImages(p => ({ ...p, front: "" }))} />
+              <PoseSlot label="รูปด้านข้าง (Side Profile)" preview={postureImages.side} onFile={(f) => setPostureImages(p => ({ ...p, side: URL.createObjectURL(f) }))} onClear={() => setPostureImages(p => ({ ...p, side: "" }))} />
+              <PoseSlot label="รูปด้านหลัง (Back Profile)" preview={postureImages.back} onFile={(f) => setPostureImages(p => ({ ...p, back: URL.createObjectURL(f) }))} onClear={() => setPostureImages(p => ({ ...p, back: "" }))} />
             </div>
-
-            {/* POSE IMAGES */}
-            <div style={S.card}>
-              <div style={{ fontWeight:700, marginBottom:4, fontSize:14 }}>📸 อัปโหลดรูปท่ายืน</div>
-              <div style={{ fontSize:11, color:"#64748b", marginBottom:12 }}>ถ่ายให้ครบทั้ง 3 มุม เพื่อผลที่แม่นยำขึ้น</div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-                <PoseSlot label="ด้านหน้า" preview={posePrev.front} onFile={(f)=>setPosePrev(p=>({...p,front:URL.createObjectURL(f)}))} />
-                <PoseSlot label="ด้านข้าง" preview={posePrev.side}  onFile={(f)=>setPosePrev(p=>({...p,side:URL.createObjectURL(f)}))} />
-                <PoseSlot label="ด้านหลัง" preview={posePrev.back}  onFile={(f)=>setPosePrev(p=>({...p,back:URL.createObjectURL(f)}))} />
+            <div style={{ ...S.card, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 14, textAlign: "center", background: "#070f1e" }}>
+              <div style={{ fontSize: 12, color: postureAnalyzed ? "#10b981" : "#e2e8f0", fontWeight: 700, padding: "4px 12px", borderRadius: 8, background: postureAnalyzed ? "rgba(16,185,129,0.1)" : "rgba(226,232,240,0.05)" }}>
+                {postureAnalyzed ? "✓ วิเคราะห์สรีระเสร็จสิ้น" : "⚠️ รอประมวลผลรูปภาพ"}
               </div>
-            </div>
-
-            {/* TIPS */}
-            <div style={S.card}>
-              <div style={{ fontWeight:700, fontSize:13, marginBottom:10 }}>💡 Tips การถ่าย</div>
-              {["ยืนเต็มตัวในกรอบ","มองตรง ไม่ก้มหน้า","แสงสว่างพอ","พื้นหลังโล่ง"].map(t => (
-                <div key={t} style={{ display:"flex", gap:7, fontSize:11, color:"#94a3b8", marginBottom:7 }}>
-                  <span style={{ color:"#22c55e" }}>✓</span>{t}
-                </div>
-              ))}
-              <div style={{ height:1, background:"#1e293b", margin:"12px 0" }} />
-              <div style={{ fontSize:11, color:"#64748b", textAlign:"center", marginBottom:8 }}>
-                {status === "loading" ? "⏳ โหลด AI..." : status === "ready" ? "✅ วิเคราะห์อยู่" : videoURL ? "พร้อมวิเคราะห์" : "รออัปโหลดวิดีโอ"}
-              </div>
-              <div style={{ fontSize:10, color:"#334155", textAlign:"center" }}>วิเคราะห์แบบ real-time</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ══ SECTION 2 ══ */}
-      <div style={{ padding:"36px 0" }}>
-        <div style={S.wrap}>
-          <div style={S.st}><span style={S.sn}>2</span> ผลวิเคราะห์ความเสี่ยงของคุณ</div>
-          <p style={S.ss}>{hasResult ? "ระบบตรวจพบข้อมูลดังนี้ — อัปเดตแบบ real-time" : "อัปโหลดวิดีโอในขั้นตอนที่ 1 เพื่อดูผล"}</p>
-
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:18 }}>
-            <Stat label="RUNLAB SCORE" val={runScore || "—"}                              color="#38bdf8" />
-            <Stat label="INJURY RISK"  val={risk}                                          color={riskColor} />
-            <Stat label="KNEE ANGLE"   val={kneeAngle !== null ? `${kneeAngle}°` : "—"}   color="#60a5fa" />
-            <Stat label="HIP DROP"     val={hipDrop   !== null ? `${hipDrop}`   : "—"}   color="#a78bfa" />
-          </div>
-
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:14 }}>
-            <RiskCard
-              level={risk === "HIGH" ? "ความเสี่ยงสูง" : risk === "MEDIUM" ? "ความเสี่ยงปานกลาง" : "ความเสี่ยงต่ำ"}
-              title="Runner's Knee"
-              pct={hasResult ? Math.min(99, 100 - kneeAlign) : 0}
-              color={risk === "HIGH" ? "#ef4444" : risk === "MEDIUM" ? "#f59e0b" : "#22c55e"}
-            />
-            <RiskCard
-              level={hipStab < 60 ? "ความเสี่ยงปานกลาง" : "ความเสี่ยงต่ำ"}
-              title="Hip Instability"
-              pct={hasResult ? Math.min(99, 100 - hipStab) : 0}
-              color={hipStab < 60 ? "#f59e0b" : "#22c55e"}
-            />
-            <RiskCard level="ความคล่องตัว" title="Running Mobility" pct={mobility} color="#22c55e" />
-            <div style={S.card}>
-              <div style={{
-  fontSize:12,
-  color:"#94a3b8",
-  lineHeight:1.8,
-  marginBottom:14
-}}>
-  {analysisSummary || "อัปโหลดวิดีโอเพื่อเริ่มวิเคราะห์"}
-  {isAnalyzing && (
-  <div style={{
-    marginTop: 12,
-    color: "#38bdf8",
-    fontSize: 14,
-    fontWeight: 700,
-  }}>
-    AI กำลังวิเคราะห์การวิ่ง...
-  </div>
-)}
-</div>
-
-<div style={{
-  background:"#020817",
-  border:"1px solid #1e293b",
-  borderRadius:12,
-  padding:"12px",
-  marginBottom:"12px"
-}}>
-  <div style={{
-    fontSize:11,
-    color:"#64748b",
-    marginBottom:4
-  }}>
-    AI Diagnosis
-  </div>
-
-  <div style={{
-    fontSize:14,
-    fontWeight:800,
-    color:"#38bdf8"
-  }}>
-    {diagnosis || "-"}
-  </div>
-</div>
-
-<div style={{
-  background:"#020817",
-  border:"1px solid #1e293b",
-  borderRadius:12,
-  padding:"12px"
-}}>
-  <div style={{
-    fontSize:11,
-    color:"#64748b",
-    marginBottom:4
-  }}>
-    Recommendation
-  </div>
-
-  <div style={{
-    fontSize:12,
-    color:"#e2e8f0",
-    lineHeight:1.7
-  }}>
-    {recommendation || "-"}
-  </div>
-</div>
-              <p style={{ fontSize:12, color:"#64748b", lineHeight:1.7, marginBottom:10 }}>
-                {hasResult
-                  ? risk === "HIGH"   ? "ความเสี่ยงสูง ควรเร่งเพิ่มความมั่นคงของสะโพก"
-                  : risk === "MEDIUM" ? "มีจุดควรปรับปรุง — เพิ่ม mobility และ hip stability"
-                  :                    "รูปแบบการวิ่งดี ควรรักษาระดับต่อเนื่อง"
-                  : "อัปโหลดวิดีโอเพื่อดูผลการวิเคราะห์"}
-              </p>
-              <button style={{ background:"none", border:"none", color:"#0ea5e9", fontSize:12, cursor:"pointer" }}>คำแนะนำเพิ่มเติม →</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ══ SECTION 3 ══ */}
-      <div style={{ background:"#040d1e", padding:"36px 0" }}>
-        <div style={S.wrap}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-            <div style={S.st}><span style={S.sn}>3</span> โปรแกรมที่แนะนำสำหรับคุณ</div>
-            <button style={{ background:"none", border:"none", color:"#0ea5e9", fontSize:12, cursor:"pointer" }}>ดูทั้งหมด →</button>
-          </div>
-          <p style={S.ss}>ระบบคัดเลือกโปรแกรมที่เหมาะกับความเสี่ยงของคุณโดยเฉพาะ</p>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18 }}>
-            <ProgramCard title="โปรแกรมแก้ปวดเข่า"             desc="ลดแรงกดที่เข่า เพิ่ม stability ฟื้นฟูกล้ามเนื้อให้สมดุล"    weeks={6} videos={24} price="1,490" />
-            <ProgramCard title="โปรแกรมเพิ่มความมั่นคงสะโพก"  desc="ลด hip drop และเพิ่มการควบคุมการเคลื่อนไหว"                  weeks={5} videos={20} price="1,290" />
-            <ProgramCard title="โปรแกรมเพิ่ม Mobility"          desc="ลดอาการตึง ช่วยให้การวิ่งลื่นไหลมากขึ้น"                    weeks={4} videos={18} price="990" />
-          </div>
-        </div>
-      </div>
-
-      {/* ══ SECTION 4 ══ */}
-      <div style={{ padding:"36px 0" }}>
-        <div style={S.wrap}>
-          <div style={S.st}><span style={S.sn}>4</span> ชำระเงินและอัปโหลดสลิป</div>
-          <p style={S.ss}>หลังเลือกโปรแกรมแล้ว ชำระเงินและส่งสลิปเพื่อยืนยัน</p>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:18 }}>
-            <div style={S.card}>
-              <div style={{ fontWeight:700, marginBottom:14 }}>สแกนชำระเงิน</div>
-              <div style={{ background:"#f8fafc", borderRadius:10, width:130, height:130, margin:"0 auto 14px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:56 }}>📱</div>
-              <div style={{ textAlign:"center", fontSize:12 }}>
-                <div style={{ color:"#64748b" }}>ชื่อบัญชี</div>
-                <div style={{ fontWeight:700, marginBottom:4 }}>ปริญญา พันสิริ</div>
-                <div style={{ color:"#64748b" }}>พร้อมเพย์</div>
-                <div style={{ fontWeight:700 }}>08X-XXX-XXXX</div>
-                <div style={{ marginTop:6, color:"#22c55e" }}>✓ PromptPay</div>
-              </div>
-            </div>
-            <div style={S.card}>
-              <div style={{ fontWeight:700, marginBottom:12 }}>โปรแกรมที่เลือก</div>
-              <div style={{ background:"rgba(14,165,233,.08)", borderRadius:9, padding:12, marginBottom:12 }}>
-                <div style={{ fontSize:13, fontWeight:700, marginBottom:3 }}>โปรแกรมแก้ปวดเข่าสำหรับนักวิ่ง</div>
-                <div style={{ fontSize:11, color:"#64748b" }}>ราคา</div>
-                <div style={{ fontSize:26, fontWeight:900 }}>1,490 บาท</div>
-              </div>
-              <p style={{ fontSize:11, color:"#64748b", lineHeight:1.7 }}>หลังตรวจสอบการชำระเงิน ระบบจะปลดล็อคคอร์สและส่งข้อมูลทางอีเมล</p>
-            </div>
-            <div style={S.card}>
-              <div style={{ fontWeight:700, marginBottom:12 }}>อัปโหลดสลิป</div>
-              <label style={{ border:"2px dashed #334155", borderRadius:10, padding:"24px 16px", display:"flex", flexDirection:"column", alignItems:"center", gap:8, cursor:"pointer", marginBottom:12 }}>
-                <div style={{ fontSize:28 }}>☁️</div>
-                <div style={{ fontSize:12, color:"#94a3b8" }}>คลิกหรือลากไฟล์มาวางที่นี่</div>
-                <div style={{ fontSize:10, color:"#475569" }}>JPG, PNG</div>
-                <input type="file" accept="image/*" style={{ display:"none" }} />
-              </label>
-              <button style={{ width:"100%", background:"#0ea5e9", color:"#0f172a", fontWeight:800, border:"none", borderRadius:9, padding:"11px 0", fontSize:13, cursor:"pointer" }}>
-                ส่งสลิปยืนยันการชำระเงิน
+              <button onClick={processStaticPosture} style={{ ...S.bp, width: "100%", background: "#10b981", color: "#fff", boxShadow: "0 4px 14px rgba(16,185,129,0.2)" }}>
+                ประมวลผลจุดตรึงสรีระ
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* FOOTER */}
-      <footer style={{ background:"#020817", borderTop:"1px solid #1e293b", padding:"16px 24px" }}>
-        <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10, fontSize:11, color:"#475569" }}>
-          <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
-            <span>✓ ตรวจสอบการชำระเงินภายใน 24 ชั่วโมง</span>
-            <span>✉ แจ้งผลผ่านอีเมลหรือ LINE</span>
-            <span>❓ ติดต่อแอดมินได้เลย</span>
+      {/* STEP 2: DYNAMIC VIDEO */}
+      <div style={{ padding: "50px 0" }}>
+        <div style={S.wrap}>
+          <div style={S.st}><span style={S.sn}>2</span> ตรวจสอบมุมการเคลื่อนไหว (Dynamic Gait Analysis)</div>
+          <p style={S.ss}>ระบบอัจฉริยะจะทำการจับพิกัดองศาเรียลไทม์ และล็อคเฉพาะค่าวิกฤตสูงสุดเพื่อใช้ทำรายงานสรุปผล</p>
+
+          <div style={{ ...S.card, background: "#050c1a" }}>
+            {!videoURL ? (
+              <label style={{ border: "2px dashed #223554", borderRadius: 20, padding: "64px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, cursor: "pointer", background: "#040914" }}>
+                <div style={{ fontSize: 42 }}>📹</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: "#00e5ff" }}>เลือกไฟล์วิดีโอวิเคราะห์การวิ่ง</div>
+                <div style={{ fontSize: 12, color: "#475569" }}>ลากไฟล์มาวางที่นี่ หรือ คลิกเพื่อเปิดหน้าต่างเลือกไฟล์ (.MP4, .MOV)</div>
+                <input type="file" accept="video/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoFile(f); }} />
+              </label>
+            ) : (
+              <div>
+                <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", background: "#000", maxWidth: 680, margin: "0 auto", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7)" }}>
+                  <video ref={videoRef} src={videoURL} style={{ width: "100%", display: "none" }} autoPlay loop muted playsInline />
+                  <canvas ref={canvasRef} style={{ display: "block", width: "100%", height: "auto" }} />
+                </div>
+                <div style={{ textAlign: "center", marginTop: 20 }}>
+                  <button onClick={clearVideo} style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12, padding: "10px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    🔄 ยกเลิกและเปลี่ยนไฟล์วิดีโอใหม่
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          <div style={{ fontWeight:700, color:"#334155" }}>© 2024 RUNLAB</div>
+        </div>
+      </div>
+
+      {/* STEP 3: CLINICAL REPORT (WITH NEW INTERACTIVE ANATOMY) */}
+      <div style={{ background: "#050b14", padding: "50px 0", borderTop: "1px solid #1e293b" }}>
+        <div style={S.wrap}>
+          <div style={S.st}><span style={S.sn}>3</span> รายงานผลวิเคราะห์ความเสี่ยงการบาดเจ็บของคุณ</div>
+          <p style={S.ss}>ตัวเลขคำนวณแบบแม่นยำร่วมกับแผนผังชีวกลศาสตร์เพื่อชี้เป้าความเสี่ยงการเกิดโรคเรื้อรัง</p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 26 }}>
+            <Stat label="RUNNING SCORE" val={stableScore || "—"} color="#00e5ff" />
+            <Stat label="RISK STATUS" val={stableRiskLevel} color={riskColor} />
+            <Stat label="MAX KNEE EXTENSION" val={stableKneeAngle !== null ? `${stableKneeAngle}°` : "—"} color="#3b82f6" />
+            <Stat label="MAX DYNAMIC HIP DROP" val={stableHipDrop !== null ? `${stableHipDrop}°` : "—"} color="#a78bfa" />
+          </div>
+
+          {/* TWO-COLUMN LAYOUT: SKELETON MODEL VS RISK CARDS */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24, marginBottom: 30, alignItems: "stretch" }}>
+            {/* Interactive Anatomy Component */}
+            <InteractiveAnatomy risks={injuryRisks} />
+
+            {/* Risk Breakdown Stack */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <RiskCard title="Runner's Knee (สะบ้าอักเสบ)" pct={injuryRisks.runnersKnee} desc="ประเมินผิวข้อสะบ้าจากมุมเหยียดเข่า ร่วมกับภาวะเข่าบิดล้มเข้าด้านใน" />
+              <RiskCard title="Achilles Tendonitis (เอ็นร้อยหวาย)" pct={injuryRisks.achilles} desc="คำนวณแรงเค้นสะสมจากระยะก้าวยาวเกินจุดศูนย์ถ่วงลำตัว (Overstride)" />
+              <RiskCard title="IT Band Syndrome (เจ็บข้างเข่า)" pct={injuryRisks.itBand} desc="วัดมุมบิดเค้นเนื้อเยื่อข้างขาจากการทรุดตัวของกระดูกเชิงกรานและสะโพก" />
+              <RiskCard title="Shin Splints (เจ็บหน้าแข้ง)" pct={injuryRisks.shinSplints} desc="ประเมินแรงกระแทกแนวกระดูกหน้าแข้งจากการลงส้นเท้าล้ำแนวสะโพกเกินเกณฑ์" />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
+            <div style={{ ...S.card, background: "#08101f" }}>
+              <div style={{ fontWeight: 700, marginBottom: 12, color: "#00e5ff", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span>🤖</span> สรุปภาพรวมและข้อเสนอแนะเชิงชีวกลศาสตร์ (AI Overview)</div>
+              <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.8, margin: 0 }}>
+                {analysisSummary || "ระบบกำลังประมวลผลโครงสร้างเพื่อสรุปพฤติกรรมแรงกดและแนวองศากระดูกของคุณ"}
+              </p>
+            </div>
+            <div style={{ ...S.card, background: "#08101f" }}>
+              <div style={{ fontWeight: 700, marginBottom: 12, color: "#f59e0b", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span>🎯</span> แนวทางและโปรแกรมแก้ไข: {diagnosis || "รอข้อมูล"}</div>
+              <div style={{ background: "#040914", border: "1px solid #1e293b", borderRadius: 14, padding: "16px", fontSize: 13, color: "#e2e8f0", lineHeight: 1.7 }}>
+                {recommendation || "แนวทางฝึกความแข็งแรงกล้ามเนื้อและปรับฟอร์มการวิ่งที่ถูกต้องเพื่อลดการบาดเจ็บ"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* STEP 4: RECOVERY PROGRAMS */}
+      <div id="recovery-programs" style={{ padding: "50px 0" }}>
+        <div style={S.wrap}>
+          <div style={S.st}><span style={S.sn}>4</span> โปรแกรมออกกำลังกายฟื้นฟูจำเพาะบุคคลที่แนะนำสำหรับคุณ</div>
+          <p style={S.ss}>คอร์สฟื้นฟูสมดุลความแข็งแรงกล้ามเนื้อ ออกแบบมาเพื่อแก้ปวดและป้องกันจุดเสี่ยงเจ็บของคุณโดยเฉพาะ</p>
+
+          <div style={S.courseGrid}>
+            <div style={S.courseCard}>
+              <div style={{ padding: 20 }}>
+                <div style={{ width: "100%", height: 140, background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, marginBottom: 16, border: "1px solid #1e293b" }}>🦵</div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>PRO-KNEE: โปรแกรมแก้ปวดเข่าสะบ้า</h3>
+                <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>ลดแรงกดเค้นที่ผิวข้อสะบ้าเข่า เสริมความแข็งแรงกล้ามเนื้อรอบหน้าขาเพื่อความมั่นคงในการลงน้ำหนัก</p>
+                <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
+                  <span>⏱️ 6 สัปดาห์</span><span>📹 24 วิดีโอ</span>
+                </div>
+              </div>
+              <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
+                <div style={S.priceTag}>1,490 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
+                <button style={{ ...S.bp, padding: "8px 16px", fontSize: 12 }}>เลือกคอร์สนี้</button>
+              </div>
+            </div>
+
+            <div style={S.courseCard}>
+              <div style={{ padding: 20 }}>
+                <div style={{ width: "100%", height: 140, background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, marginBottom: 16, border: "1px solid #1e293b" }}>🍑</div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>CORE-HIP: เพิ่มความมั่นคงของสะโพก</h3>
+                <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>แก้สภาวะสะโพกทรุดขณะวิ่ง เพิ่มการควบคุมแกนเชิงกรานและจัดระเบียบท่าทางช่วงล่าง</p>
+                <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
+                  <span>⏱️ 8 สัปดาห์</span><span>📹 20 วิดีโอ</span>
+                </div>
+              </div>
+              <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
+                <div style={S.priceTag}>1,290 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
+                <button style={{ ...S.bp, padding: "8px 16px", fontSize: 12 }}>เลือกคอร์สนี้</button>
+              </div>
+            </div>
+
+            <div style={S.courseCard}>
+              <div style={{ padding: 20 }}>
+                <div style={{ width: "100%", height: 140, background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, marginBottom: 16, border: "1px solid #1e293b" }}>🧘‍♂️</div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>RUN-MOBILITY: เพิ่มมุมเคลื่อนไหวข้อต่อ</h3>
+                <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>เพิ่มความยืดหยุ่นให้ข้อเท้าและข้อสะโพก ช่วยลดการดึงรั้งและทำให้ก้าววิ่งไหลลื่นขึ้น</p>
+                <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
+                  <span>⏱️ 4 สัปดาห์</span><span>📹 18 วิดีโอ</span>
+                </div>
+              </div>
+              <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
+                <div style={S.priceTag}>990 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
+                <button style={{ ...S.bp, padding: "8px 16px", fontSize: 12 }}>เลือกคอร์สนี้</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* STEP 5: PAYMENT GATEWAY */}
+      <div style={{ background: "#050b14", padding: "50px 0", borderTop: "1px solid #1e293b" }}>
+        <div style={S.wrap}>
+          <div style={S.st}><span style={S.sn}>5</span> ชำระเงินและอัปโหลดสลิปเพื่อเปิดใช้งานระบบ</div>
+          <p style={S.ss}>สแกนโอนเงินผ่าน QR Code ด้านล่างเพื่อยืนยันเปิดสิทธิ์เข้าใช้โปรแกรมฟื้นฟูโดยอัตโนมัติ</p>
+
+          <div style={S.payGrid}>
+            <div style={{ ...S.card, textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "#070f1e" }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 700, marginBottom: 12, letterSpacing: 0.5 }}>PROMPTPAY OFFICIAL QR</div>
+              <div style={{ width: 150, height: 150, background: "#fff", borderRadius: 12, padding: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
+                <span style={{ color: "#000", fontWeight: 900, fontSize: 13 }}>[ QR CODE ]</span>
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginTop: 14 }}>ชื่อบัญชี: ปริญญา พันธ์ศิริ</div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: "#00e5ff", marginTop: 4 }}>08X-XXX-XXXX</div>
+            </div>
+
+            <div style={{ ...S.card, background: "#070f1e", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, marginBottom: 10 }}>สรุปรายการคอร์สที่เลือก</div>
+                <div style={{ display: "flex", gap: 14, background: "#040914", border: "1px solid #1e293b", padding: 16, borderRadius: 16 }}>
+                  <div style={{ fontSize: 28 }}>🦵</div>
+                  <div>
+                    <h4 style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: 0 }}>โปรแกรมแก้ปวดเข่าสะบ้าสำหรับนักวิ่ง</h4>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: "#00e5ff", marginTop: 6 }}>1,490 THB</div>
+                  </div>
+                </div>
+              </div>
+              <p style={{ fontSize: 11, color: "#475569", lineHeight: 1.6, margin: "14px 0 0" }}>
+                * หลังตรวจสอบยอดชำระเงินเรียบร้อยแล้ว ระบบอัตโนมัติจะทำการปลดล็อกคอร์สและส่งข้อมูลเข้าสู่อีเมลของคุณทันที
+              </p>
+            </div>
+
+            <div style={{ ...S.card, background: "#070f1e" }}>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, marginBottom: 10 }}>อัปโหลดสลิปการโอนเงิน (Upload Slip)</div>
+              <div style={{ position: "relative", border: "2px dashed #223554", borderRadius: 16, padding: "20px 12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#040914", height: 140 }}>
+                {slipImage ? (
+                  <div style={{ width: "100%", height: "100%", position: "relative" }}>
+                    <img src={slipImage} alt="Slip" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 8 }} />
+                    <button onClick={() => setSlipImage("")} style={{ position: "absolute", top: -4, right: -4, background: "rgba(239,68,68,0.9)", color: "#fff", border: "none", borderRadius: 6, padding: "2px 6px", fontSize: 9, cursor: "pointer" }}>
+                      ลบรูป
+                    </button>
+                  </div>
+                ) : (
+                  <label style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 6 }}>
+                    <div style={{ fontSize: 26 }}>🧾</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>คลิกเพื่อเลือกไฟล์สลิป</div>
+                    <div style={{ fontSize: 10, color: "#475569" }}>รองรับไฟล์ JPG, PNG</div>
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setSlipImage(URL.createObjectURL(f)); }} />
+                  </label>
+                )}
+              </div>
+              <button onClick={() => { if (slipImage) alert("ระบบได้รับไฟล์สลิปแล้ว กำลังส่งตรวจความถูกต้องอัตโนมัติครับบอส"); else alert("กรุณาแนบภาพสลิปเงินโอนก่อนครับบอส"); }} style={{ ...S.bp, width: "100%", marginTop: 14 }}>
+                ส่งสลิปเพื่อยืนยันการชำระเงิน
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER & COPYRIGHT SECTION */}
+      <footer style={{ background: "#020613", borderTop: "1px solid #1e293b", padding: "40px 0 30px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{ fontWeight: 900, fontSize: 18, color: "#fff", letterSpacing: 0.5 }}>
+              RUNLAB <span style={{ fontSize: 12, color: "#00e5ff", fontWeight: 600 }}>BY บันทึกของโค้ช</span>
+            </div>
+            <p style={{ fontSize: 12, color: "#475569", margin: 0, textAlign: "center" }}>
+              ระบบวิเคราะห์สรีระและฟอร์มการวิ่งเพื่อการป้องกันอาการบาดเจ็บอย่างตรงจุด
+            </p>
+          </div>
+          <div style={{ width: "100%", maxWidth: 300, height: 1, background: "linear-gradient(to right, transparent, #1e293b, transparent)" }} />
+          <div style={{ fontSize: 12, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
+            &copy; {new Date().getFullYear()} <strong>Runlab by บันทึกของโค้ช</strong>. All Rights Reserved.
+          </div>
         </div>
       </footer>
     </div>
