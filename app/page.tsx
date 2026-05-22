@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
 
 const SCRIPTS = [
@@ -775,64 +776,313 @@ export default function RunLabPremiumSystem() {
         </div>
       </div>
 
-      {/* STEP 5: PAYMENT GATEWAY */}
-      <div style={{ background: "#050b14", padding: "50px 0", borderTop: "1px solid #1e293b" }}>
-        <div style={S.wrap}>
-          <div style={S.st}><span style={S.sn}>5</span> ชำระเงินและอัปโหลดสลิปเพื่อเปิดใช้งานระบบ</div>
-          <p style={S.ss}>สแกนโอนเงินผ่าน QR Code ด้านล่างเพื่อยืนยันเปิดสิทธิ์เข้าใช้โปรแกรมฟื้นฟูโดยอัตโนมัติ</p>
+{/* STEP 5: PAYMENT GATEWAY */}
+<div
+  style={{
+    background: "#050b14",
+    padding: "50px 0",
+    borderTop: "1px solid #1e293b",
+  }}
+>
+  <div style={S.wrap}>
 
-          <div style={S.payGrid}>
-            <div style={{ ...S.card, textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "#070f1e" }}>
-              <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 700, marginBottom: 12, letterSpacing: 0.5 }}>PROMPTPAY OFFICIAL QR</div>
-              <div style={{ width: 150, height: 150, background: "#fff", borderRadius: 12, padding: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
-                <span style={{ color: "#000", fontWeight: 900, fontSize: 13 }}>[ QR CODE ]</span>
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginTop: 14 }}>ชื่อบัญชี: ปริญญา พันธ์ศิริ</div>
-              <div style={{ fontSize: 14, fontWeight: 900, color: "#00e5ff", marginTop: 4 }}>08X-XXX-XXXX</div>
-            </div>
+    <div style={S.st}>
+      <span style={S.sn}>5</span>
+      ชำระเงินและอัปโหลดสลิปเพื่อเปิดใช้งานระบบ
+    </div>
 
-            <div style={{ ...S.card, background: "#070f1e", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, marginBottom: 10 }}>สรุปรายการคอร์สที่เลือก</div>
-                <div style={{ display: "flex", gap: 14, background: "#040914", border: "1px solid #1e293b", padding: 16, borderRadius: 16 }}>
-                  <div style={{ fontSize: 28 }}>🦵</div>
-                  <div>
-                    <h4 style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: 0 }}>โปรแกรมแก้ปวดเข่าสะบ้าสำหรับนักวิ่ง</h4>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: "#00e5ff", marginTop: 6 }}>1,490 THB</div>
-                  </div>
-                </div>
-              </div>
-              <p style={{ fontSize: 11, color: "#475569", lineHeight: 1.6, margin: "14px 0 0" }}>
-                * หลังตรวจสอบยอดชำระเงินเรียบร้อยแล้ว ระบบอัตโนมัติจะทำการปลดล็อกคอร์สและส่งข้อมูลเข้าสู่อีเมลของคุณทันที
-              </p>
-            </div>
+    <p style={S.ss}>
+      สแกนโอนเงินผ่าน QR Code ด้านล่างเพื่อยืนยันเปิดสิทธิ์เข้าใช้โปรแกรมฟื้นฟูโดยอัตโนมัติ
+    </p>
 
-            <div style={{ ...S.card, background: "#070f1e" }}>
-              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 700, marginBottom: 10 }}>อัปโหลดสลิปการโอนเงิน (Upload Slip)</div>
-              <div style={{ position: "relative", border: "2px dashed #223554", borderRadius: 16, padding: "20px 12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#040914", height: 140 }}>
-                {slipImage ? (
-                  <div style={{ width: "100%", height: "100%", position: "relative" }}>
-                    <img src={slipImage} alt="Slip" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 8 }} />
-                    <button onClick={() => setSlipImage("")} style={{ position: "absolute", top: -4, right: -4, background: "rgba(239,68,68,0.9)", color: "#fff", border: "none", borderRadius: 6, padding: "2px 6px", fontSize: 9, cursor: "pointer" }}>
-                      ลบรูป
-                    </button>
-                  </div>
-                ) : (
-                  <label style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 6 }}>
-                    <div style={{ fontSize: 26 }}>🧾</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>คลิกเพื่อเลือกไฟล์สลิป</div>
-                    <div style={{ fontSize: 10, color: "#475569" }}>รองรับไฟล์ JPG, PNG</div>
-                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setSlipImage(URL.createObjectURL(f)); }} />
-                  </label>
-                )}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
+        gap: 20,
+        marginTop: 24,
+      }}
+    >
+
+      {/* QR CARD */}
+      <div
+        style={{
+          ...S.card,
+          background: "#070f1e",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            color: "#94a3b8",
+            fontWeight: 700,
+            marginBottom: 12,
+          }}
+        >
+          PROMPTPAY OFFICIAL QR
+        </div>
+
+        <div
+          style={{
+            width: 150,
+            height: 150,
+            background: "#fff",
+            borderRadius: 12,
+            padding: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Image
+            src="/promptpay-qr.png"
+            alt="PromptPay QR Code"
+            width={130}
+            height={130}
+            style={{ objectFit: "contain" }}
+            priority
+          />
+        </div>
+
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#fff",
+            marginTop: 14,
+          }}
+        >
+          ชื่อบัญชี: ปริญญา ปานศิริ
+        </div>
+
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 900,
+            color: "#00e5ff",
+            marginTop: 4,
+          }}
+        >
+          08X-XXX-XXXX
+        </div>
+      </div>
+
+      {/* ORDER SUMMARY */}
+      <div
+        style={{
+          ...S.card,
+          background: "#070f1e",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              color: "#64748b",
+              fontWeight: 700,
+              marginBottom: 10,
+            }}
+          >
+            สรุปรายการคอร์สที่เลือก
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 14,
+              background: "#040914",
+              border: "1px solid #1e293b",
+              padding: 16,
+              borderRadius: 16,
+            }}
+          >
+            <div style={{ fontSize: 28 }}>🦵</div>
+
+            <div>
+              <h4
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "#fff",
+                  margin: 0,
+                }}
+              >
+                โปรแกรมแก้ปวดเข่าสะบ้าสำหรับนักวิ่ง
+              </h4>
+
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 900,
+                  color: "#00e5ff",
+                  marginTop: 6,
+                }}
+              >
+                1,490 THB
               </div>
-              <button onClick={() => { if (slipImage) alert("ระบบได้รับไฟล์สลิปแล้ว กำลังส่งตรวจความถูกต้องอัตโนมัติครับบอส"); else alert("กรุณาแนบภาพสลิปเงินโอนก่อนครับบอส"); }} style={{ ...S.bp, width: "100%", marginTop: 14 }}>
-                ส่งสลิปเพื่อยืนยันการชำระเงิน
-              </button>
             </div>
           </div>
         </div>
+
+        <p
+          style={{
+            fontSize: 11,
+            color: "#475569",
+            lineHeight: 1.6,
+            margin: "14px 0 0",
+          }}
+        >
+          * หลังตรวจสอบยอดชำระเงินเรียบร้อยแล้ว ระบบอัตโนมัติจะทำการปลดล็อกคอร์สและส่งข้อมูลเข้าสู่อีเมลของคุณทันที
+        </p>
       </div>
+
+      {/* SLIP UPLOAD */}
+      <div
+        style={{
+          ...S.card,
+          background: "#070f1e",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            color: "#64748b",
+            fontWeight: 700,
+            marginBottom: 10,
+          }}
+        >
+          อัปโหลดสลิปการโอนเงิน (Upload Slip)
+        </div>
+
+        <div
+          style={{
+            position: "relative",
+            border: "2px dashed #223554",
+            borderRadius: 16,
+            padding: "20px 12px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#040914",
+            height: 140,
+          }}
+        >
+          {slipImage ? (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                position: "relative",
+              }}
+            >
+              <img
+                src={slipImage}
+                alt="Slip"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  borderRadius: 8,
+                }}
+              />
+
+              <button
+                onClick={() => setSlipImage("")}
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  right: -4,
+                  background: "rgba(239,68,68,0.9)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  padding: "2px 6px",
+                  fontSize: 9,
+                  cursor: "pointer",
+                }}
+              >
+                ลบรูป
+              </button>
+            </div>
+          ) : (
+            <label
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                gap: 6,
+              }}
+            >
+              <div style={{ fontSize: 26 }}>🧾</div>
+
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#e2e8f0",
+                }}
+              >
+                คลิกเพื่อเลือกไฟล์สลิป
+              </div>
+
+              <div
+                style={{
+                  fontSize: 10,
+                  color: "#475569",
+                }}
+              >
+                รองรับไฟล์ JPG, PNG
+              </div>
+
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    setSlipImage(URL.createObjectURL(f));
+                  }
+                }}
+              />
+            </label>
+          )}
+        </div>
+
+        <button
+          onClick={() => {
+            if (slipImage) {
+              alert("ระบบได้รับไฟล์สลิปแล้ว กำลังส่งตรวจความถูกต้องอัตโนมัติครับบอส");
+            } else {
+              alert("กรุณาแนบภาพสลิปเงินโอนก่อนครับบอส");
+            }
+          }}
+          style={{
+            ...S.bp,
+            width: "100%",
+            marginTop: 14,
+          }}
+        >
+          ส่งสลิปเพื่อยืนยันการชำระเงิน
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
 
       {/* FOOTER & COPYRIGHT SECTION */}
       <footer style={{ background: "#020613", borderTop: "1px solid #1e293b", padding: "40px 0 30px" }}>
