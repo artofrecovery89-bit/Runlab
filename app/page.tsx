@@ -1,5 +1,12 @@
 "use client";
 
+// import {
+//   SignInButton,
+//   SignedIn,
+//   SignedOut,
+//   UserButton
+// } from '@clerk/nextjs'
+
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
 
@@ -533,9 +540,16 @@ export default function RunLabPremiumSystem() {
     payGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginTop: 14 }
   };
 
-  return (
-    <div style={S.page}>
-      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+return (
+  <div style={{ position: "relative", minHeight: "100vh", background: "#030712", color: "#f8fafc", fontFamily: "'Sarabun', sans-serif" }}>
+    <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999 }}>
+      <button style={{ cursor: "pointer", padding: "8px 16px" }}>
+        Login
+      </button>
+    </div>
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
       {/* HEADER NAVIGATION */}
       <nav style={S.nav}>
@@ -1096,11 +1110,12 @@ export default function RunLabPremiumSystem() {
             </p>
           </div>
           <div style={{ width: "100%", maxWidth: 300, height: 1, background: "linear-gradient(to right, transparent, #1e293b, transparent)" }} />
-          <div style={{ fontSize: 12, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
-            &copy; {new Date().getFullYear()} <strong>Runlab by บันทึกของโค้ช</strong>. All Rights Reserved.
+               <div style={{ fontSize: 12, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
+            © {new Date().getFullYear()} <strong>Runlab by บันทึกของโค้ช</strong>. All Rights Reserved.
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
