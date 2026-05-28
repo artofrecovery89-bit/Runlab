@@ -568,6 +568,21 @@ function InteractiveAnatomy({ risks }: { risks: { runnersKnee: number; achilles:
 }
 
 export default function RunLabPremiumSystem() {
+  const [isMobile, setIsMobile] = useState(false);
+
+useEffect(() => {
+  const checkMobile = () => {
+    setIsMobile(window.innerWidth < 768);
+  };
+
+  checkMobile();
+
+  window.addEventListener("resize", checkMobile);
+
+  return () => {
+    window.removeEventListener("resize", checkMobile);
+  };
+}, []);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const poseRef = useRef<any>(null);
@@ -944,7 +959,9 @@ setStableScore(overallScore);
       {/* HERO SECTION */}
   <div style={{
   display: "grid",
-  gridTemplateColumns: "1fr 400px",
+  gridTemplateColumns: isMobile
+  ? "1fr"
+  : "1fr 450px",
   gap: "60px",
   alignItems: "center",
   padding: "40px",
@@ -1013,7 +1030,9 @@ setStableScore(overallScore);
   style={{
     ...S.wrap,
     display: "grid",
-    gridTemplateColumns: "1.1fr 0.9fr",
+    gridTemplateColumns: isMobile
+  ? "1fr"
+  : "1fr 400px",
     gap: 50,
     alignItems: "center",
     padding: "70px 20px",
@@ -1349,7 +1368,9 @@ setStableScore(overallScore);
     <div
   style={{
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
+   gridTemplateColumns: isMobile
+  ? "1fr"
+  : "1fr 1fr 1fr",
     gap: 20,
     marginTop: 24,
     alignItems: "stretch",
