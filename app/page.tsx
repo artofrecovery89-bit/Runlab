@@ -589,26 +589,14 @@ useEffect(() => {
   const [postureMetrics, setPostureMetrics] = useState({
     shoulderTilt: 0, pelvicTilt: 0, kneeValgus: 0, footRotation: 0, forwardHead: 0,
   });
-  const officeRisk = Math.min(
-  100,
-  Math.round(
-    postureMetrics.forwardHead * 4 +
-    postureMetrics.shoulderTilt * 3 +
-    postureMetrics.pelvicTilt * 2
-  )
-);
 
-const officeLevel =
-  officeRisk > 70
-    ? "HIGH"
-    : officeRisk > 40
-    ? "MEDIUM"
-    : "LOW";
   const [postureAnalyzed, setPostureAnalyzed] = useState(false);
   const [videoURL, setVideoURL] = useState("");
   const [postureImages, setPostureImages] = useState({ front: "", side: "", back: "" });
 
   // DEMO INITIAL STATE
+  const [officeRisk, setOfficeRisk] = useState(0);
+const [officeLevel, setOfficeLevel] = useState("LOW");
   const [stableScore, setStableScore] = useState<number>(0);
   const [stableRiskLevel, setStableRiskLevel] = useState<string>("MEDIUM");
   const [stableKneeAngle, setStableKneeAngle] = useState<number | null>(164);
@@ -641,6 +629,16 @@ const officeLevel =
       alert("กรุณาอัปโหลดรูปท่ายืนเพื่อคำนวณครับ");
       return;
     }
+    const processStaticPosture = async () => {
+
+  setStableScore(82);
+
+  setOfficeRisk(72);
+
+  setOfficeLevel("MEDIUM");
+
+  setPostureAnalyzed(true);
+};
     const simulatedCalibration = {
       shoulderTilt: postureImages.front ? 3 : 0,
       pelvicTilt: postureImages.back ? 5 : 0,
@@ -826,7 +824,20 @@ setStableScore(overallScore);
     page: { minHeight: "100vh", background: "#030712", color: "#f8fafc", fontFamily: "'Sarabun', sans-serif" },
     nav: { background: "rgba(3,7,18,0.85)", borderBottom: "1px solid #1e293b", position: "sticky" as const, top: 0, zIndex: 100, backdropFilter: "blur(12px)" },
     navIn: { maxWidth: 1200, margin: "0 auto", padding: "0 20px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" },
-    wrap: { maxWidth: 1200, margin: "0 auto", padding: "0 20px" },
+wrap: {
+  width: "100%",
+  maxWidth: 1200,
+  margin: "0 auto",
+  padding: "0 20px",
+},
+
+sn: {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 32,
+  height: 32,
+},
     sn: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, background: "linear-gradient(135deg, #00e5ff 0%, #0066ff 100%)", color: "#030712", borderRadius: 10, fontWeight: 900, fontSize: 14, marginRight: 12, boxShadow: "0 4px 14px rgba(0,229,255,0.3)" },
     st: { fontSize: 22, fontWeight: 800, display: "flex", alignItems: "center", marginBottom: 6, color: "#fff" },
     ss: { color: "#64748b", fontSize: 14, marginBottom: 24, paddingLeft: 44 },
@@ -847,7 +858,10 @@ setStableScore(overallScore);
   return (
     <div style={{ position: "relative", minHeight: "100vh", background: "#030712", color: "#f8fafc", fontFamily: "'Sarabun', sans-serif" }}>
   
-  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+  <div style={{ display: "flex",
+flexWrap: "wrap",
+justifyContent: "space-between",
+gap: 10,}}>
     <a
       href="/academy"
       style={{
@@ -1047,12 +1061,43 @@ setStableScore(overallScore);
               <button onClick={processStaticPosture} style={{ ...S.bp, width: "100%", background: "#10b981", color: "#fff", boxShadow: "0 4px 14px rgba(16,185,129,0.2)" }}>
                 ประมวลผลจุดตรึงสรีระ
               </button>
-              {postureAnalyzed && (
-  <div style={{ marginTop: 20 }}>
-    <OfficeRiskCard
-      risk={officeRisk}
-      level={officeLevel}
-    />
+          {postureAnalyzed && (
+  <div
+    style={{
+      marginTop: 20,
+      background: "#091120",
+      border: "1px solid #1e293b",
+      borderRadius: 20,
+      padding: 20,
+    }}
+  >
+    <h3 style={{ color: "#fff", marginBottom: 10 }}>
+      ความเสี่ยง Office Syndrome
+    </h3>
+
+    <div
+      style={{
+        fontSize: 42,
+        fontWeight: 800,
+        color: "#00e5ff",
+      }}
+    >
+      {officeRisk}%
+    </div>
+
+    <div
+      style={{
+        marginTop: 10,
+        color:
+          officeLevel === "HIGH"
+            ? "#ef4444"
+            : officeLevel === "MEDIUM"
+            ? "#f59e0b"
+            : "#10b981",
+      }}
+    >
+      ระดับความเสี่ยง : {officeLevel}
+    </div>
   </div>
 )}
             </div>
