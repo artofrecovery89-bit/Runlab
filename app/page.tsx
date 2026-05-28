@@ -932,8 +932,7 @@ gap: 10,}}>
 </div>
           <div style={{ display: "flex", gap: 28, fontSize: 14, fontWeight: 600, color: "#64748b" }}>
             <span style={{ color: "#00e5ff", cursor: "pointer" }}>หน้าแรก</span>
-            <span style={{ cursor: "pointer" }}>วิเคราะห์ฟอร์มวิ่ง</span>
-            <span style={{ cursor: "pointer" }}>โปรแกรมกายภาพ</span>
+      
             <div
 
   style={{
