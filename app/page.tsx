@@ -1,11 +1,11 @@
 "use client";
 
-// import {
-//   SignInButton,
-//   SignedIn,
-//   SignedOut,
-//   UserButton
-// } from '@clerk/nextjs'
+import {
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
 
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -101,6 +101,32 @@ function drawPoseSkeleton(ctx: CanvasRenderingContext2D, landmarks: any[], w: nu
 
 function Ring({ v = 0, size = 110 }) {
   const r = 40, c = 2 * Math.PI * r, d = (v / 100) * c;
+  const highestRisk = Object.entries(injuryRisks).sort(
+  (a, b) => b[1] - a[1]
+)[0];
+
+const riskNameMap: Record<string, string> = {
+  runnersKnee: "Runner's Knee",
+  achilles: "Achilles Tendon",
+  itBand: "IT Band Syndrome",
+  shinSplints: "Shin Splints",
+};
+
+const movementQuality =
+  stableScore >= 85
+    ? "Excellent"
+    : stableScore >= 70
+    ? "Good"
+    : stableScore >= 50
+    ? "Moderate"
+    : "Poor";
+
+const riskColor =
+  stableRiskLevel === "HIGH"
+    ? "#ef4444"
+    : stableRiskLevel === "MEDIUM"
+    ? "#f59e0b"
+    : "#10b981";
   return (
     <svg width={size} height={size} viewBox="0 0 100 100">
       <circle cx="50" cy="50" r={r} fill="none" stroke="#1e293b" strokeWidth="8" />
@@ -119,15 +145,182 @@ function Ring({ v = 0, size = 110 }) {
 
 function Bar({ label, value, color = "#00e5ff" }: { label: string; value: number; color?: string }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#94a3b8", marginBottom: 5 }}>
-        <span style={{ fontWeight: 500 }}>{label}</span>
-        <span style={{ color: "#f8fafc", fontWeight: 700 }}>{value}%</span>
+   <div
+  style={{
+    background:
+      "linear-gradient(145deg,#08101f 0%,#0f172a 100%)",
+    border: "1px solid rgba(255,255,255,.08)",
+    borderRadius: 32,
+    padding: 36,
+    position: "relative",
+    overflow: "hidden",
+    boxShadow:
+      "0 25px 60px rgba(0,0,0,.35)",
+  }}
+>
+  {/* Glow */}
+  <div
+    style={{
+      position: "absolute",
+      top: -120,
+      right: -120,
+      width: 250,
+      height: 250,
+      borderRadius: "50%",
+      background:
+        "radial-gradient(circle,#00e5ff33,transparent)",
+      pointerEvents: "none",
+    }}
+  />
+
+  <div
+    style={{
+      fontSize: 12,
+      letterSpacing: 2,
+      fontWeight: 800,
+      color: "#64748b",
+      marginBottom: 24,
+    }}
+  >
+    AI ASSESSMENT DASHBOARD
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 24,
+    }}
+  >
+    <div>
+      <div
+        style={{
+          fontSize: 72,
+          fontWeight: 900,
+          lineHeight: 1,
+          color: "#00e5ff",
+        }}
+      >
+        {stableScore}
       </div>
-      <div style={{ background: "#1e293b", borderRadius: 99, height: 6, overflow: "hidden" }}>
-        <div style={{ width: `${Math.min(100, Math.max(0, value))}%`, height: "100%", borderRadius: 99, background: color, transition: "width .6s cubic-bezier(0.4, 0, 0.2, 1)" }} />
+
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: "#e2e8f0",
+          marginTop: 8,
+        }}
+      >
+        {movementQuality} Movement Quality
       </div>
     </div>
+
+    <Ring v={stableScore} size={130} />
+  </div>
+
+  <div
+    style={{
+      display: "inline-flex",
+      padding: "8px 14px",
+      borderRadius: 999,
+      background: `${riskColor}20`,
+      color: riskColor,
+      fontSize: 12,
+      fontWeight: 800,
+      marginBottom: 24,
+    }}
+  >
+    {stableRiskLevel} RISK
+  </div>
+
+  <div
+    style={{
+      borderTop: "1px solid #1e293b",
+      paddingTop: 20,
+      marginTop: 10,
+    }}
+  >
+    <Bar
+      label="Pelvic Control"
+      value={subMetrics.hip}
+      color="#f59e0b"
+    />
+
+    <Bar
+      label="Knee Alignment"
+      value={subMetrics.knee}
+      color="#10b981"
+    />
+
+    <Bar
+      label="Mobility"
+      value={subMetrics.mob}
+      color="#3b82f6"
+    />
+
+    <Bar
+      label="Balance"
+      value={subMetrics.bal}
+      color="#a855f7"
+    />
+  </div>
+
+  <div
+    style={{
+      marginTop: 20,
+      padding: 18,
+      background: "#040914",
+      border: "1px solid #1e293b",
+      borderRadius: 16,
+    }}
+  >
+    <div
+      style={{
+        fontSize: 11,
+        color: "#64748b",
+        fontWeight: 700,
+        marginBottom: 8,
+      }}
+    >
+      HIGHEST INJURY RISK
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <div
+        style={{
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 15,
+        }}
+      >
+        {riskNameMap[highestRisk[0]]}
+      </div>
+
+      <div
+        style={{
+          color:
+            highestRisk[1] > 70
+              ? "#ef4444"
+              : highestRisk[1] > 40
+              ? "#f59e0b"
+              : "#10b981",
+          fontWeight: 900,
+          fontSize: 24,
+        }}
+      >
+        {highestRisk[1]}%
+      </div>
+    </div>
+  </div>
+</div>
   );
 }
 
@@ -135,7 +328,75 @@ function RiskCard({ title, pct, desc }: { title: string; pct: number; desc: stri
   const level = pct > 70 ? "ความเสี่ยงสูง" : pct > 40 ? "ความเสี่ยงปานกลาง" : "ความเสี่ยงต่ำ";
   const color = pct > 70 ? "#ef4444" : pct > 40 ? "#f59e0b" : "#10b981";
   const bgGlow = pct > 70 ? "rgba(239,68,68,0.03)" : pct > 40 ? "rgba(245,158,11,0.03)" : "rgba(16,185,129,0.03)";
-  
+function OfficeRiskCard({
+  risk,
+  level,
+}: {
+  risk: number;
+  level: string;
+}) {
+  const color =
+    level === "HIGH"
+      ? "#ef4444"
+      : level === "MEDIUM"
+      ? "#f59e0b"
+      : "#10b981";
+
+  return (
+    <div
+      style={{
+        background:
+          "linear-gradient(145deg,#08101f,#111c31)",
+        borderRadius: 24,
+        padding: 24,
+        border: `1px solid ${color}30`,
+      }}
+    >
+      <div
+        style={{
+          color,
+          fontSize: 12,
+          fontWeight: 800,
+          marginBottom: 8,
+        }}
+      >
+        OFFICE SYNDROME RISK
+      </div>
+
+      <div
+        style={{
+          fontSize: 56,
+          fontWeight: 900,
+          color,
+        }}
+      >
+        {risk}%
+      </div>
+
+      <div
+        style={{
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 16,
+        }}
+      >
+        {level} RISK
+      </div>
+
+      <div
+        style={{
+          marginTop: 12,
+          color: "#94a3b8",
+          fontSize: 13,
+          lineHeight: 1.7,
+        }}
+      >
+        ความเสี่ยงต่ออาการคอยื่น
+        ไหล่ห่อ และปวดหลังจากการนั่งทำงาน
+      </div>
+    </div>
+  );
+}
   return (
     <div style={{ background: "#0b1528", border: `1px solid ${color}26`, borderRadius: 16, padding: "18px", display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: `0 4px 20px ${bgGlow}` }}>
       <div>
@@ -194,14 +455,15 @@ function PoseSlot({ label, preview, onFile, onClear }: PoseSlotProps) {
 /* INTERACTIVE ANATOMY COMPONENT (SVG-BASED WITH DYNAMIC PULSE GLOW) */
 function InteractiveAnatomy({ risks }: { risks: { runnersKnee: number; achilles: number; itBand: number; shinSplints: number } }) {
   const getJointColor = (pct: number) => {
-    if (pct === 0) return "#00e5ff"; 
-    return pct > 70 ? "#ef4444" : pct > 40 ? "#f59e0b" : "#10b981"; 
+    if (pct === 0) return "#00e5ff";
+    return pct > 70 ? "#ef4444" : pct > 40 ? "#f59e0b" : "#10b981";
   };
 
   return (
     <div style={{ background: "#060d1a", border: "1px solid #1e293b", borderRadius: 24, padding: "24px", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 520, boxShadow: "inset 0 0 40px rgba(0,229,255,0.02)" }}>
       {/* CSS Animation Keyframes Injector */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes pulseGlow {
           0% { r: 6; opacity: 0.5; stroke-width: 1; }
           50% { r: 16; opacity: 0.8; stroke-width: 4; }
@@ -255,7 +517,7 @@ function InteractiveAnatomy({ risks }: { risks: { runnersKnee: number; achilles:
         <line x1="155" y1="255" x2="140" y2="320" stroke="#1e293b" strokeWidth="3" />
 
         {/* DYNAMIC RISK POINTERS & INTERACTIVE DOTS */}
-        
+
         {/* 1. IT BAND RISK */}
         <g>
           <circle cx="90" cy="185" r="14" fill="none" stroke={getJointColor(risks.itBand)} className="glow-circle" />
@@ -319,12 +581,27 @@ export default function RunLabPremiumSystem() {
   const [postureMetrics, setPostureMetrics] = useState({
     shoulderTilt: 0, pelvicTilt: 0, kneeValgus: 0, footRotation: 0, forwardHead: 0,
   });
+  const officeRisk = Math.min(
+  100,
+  Math.round(
+    postureMetrics.forwardHead * 4 +
+    postureMetrics.shoulderTilt * 3 +
+    postureMetrics.pelvicTilt * 2
+  )
+);
+
+const officeLevel =
+  officeRisk > 70
+    ? "HIGH"
+    : officeRisk > 40
+    ? "MEDIUM"
+    : "LOW";
   const [postureAnalyzed, setPostureAnalyzed] = useState(false);
   const [videoURL, setVideoURL] = useState("");
   const [postureImages, setPostureImages] = useState({ front: "", side: "", back: "" });
 
-  {/* DEMO INITIAL STATE: มีค่าตั้งต้นให้บอสเห็นวงแหวนและจุดกะพริบตั้งแต่เปิดเว็บ */}
-  const [stableScore, setStableScore] = useState<number>(82);
+  // DEMO INITIAL STATE
+  const [stableScore, setStableScore] = useState<number>(0);
   const [stableRiskLevel, setStableRiskLevel] = useState<string>("MEDIUM");
   const [stableKneeAngle, setStableKneeAngle] = useState<number | null>(164);
   const [stableHipDrop, setStableHipDrop] = useState<number | null>(0);
@@ -337,14 +614,17 @@ export default function RunLabPremiumSystem() {
   const [analysisSummary, setAnalysisSummary] = useState("ตัวอย่างโมเดลเริ่มต้น: พบมุมองศาเข่าคงค้างขณะรับแรงบิดแคบลงร่วมกับมีสภาวะแกนเชิงกรานเอียง (Pelvic Tilt) ขณะก้าววิ่งน้ำหนักเสริมกระแทก");
 
   const [slipImage, setSlipImage] = useState<string>("");
-
+  const [selectedCourse, setSelectedCourse] = useState({
+    name: "PRO-KNEE",
+    price: 1490,
+  });
   const riskColor = stableRiskLevel === "HIGH" ? "#ef4444" : stableRiskLevel === "MEDIUM" ? "#f59e0b" : stableRiskLevel === "LOW" ? "#10b981" : "#475569";
 
   useEffect(() => {
     ensureScripts();
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      if (poseRef.current) { try { poseRef.current.close(); } catch (_) {} }
+      if (poseRef.current) { try { poseRef.current.close(); } catch (_) { } }
     };
   }, []);
 
@@ -354,11 +634,11 @@ export default function RunLabPremiumSystem() {
       return;
     }
     const simulatedCalibration = {
-      shoulderTilt: postureImages.front ? 3 : 0,   
-      pelvicTilt: postureImages.back ? 5 : 0,     
-      kneeValgus: postureImages.front ? 8 : 0,   
-      footRotation: postureImages.back ? 6 : 0,  
-      forwardHead: postureImages.side ? 5 : 0      
+      shoulderTilt: postureImages.front ? 3 : 0,
+      pelvicTilt: postureImages.back ? 5 : 0,
+      kneeValgus: postureImages.front ? 8 : 0,
+      footRotation: postureImages.back ? 6 : 0,
+      forwardHead: postureImages.side ? 5 : 0
     };
     setPostureMetrics(simulatedCalibration);
     setPostureAnalyzed(true);
@@ -366,7 +646,7 @@ export default function RunLabPremiumSystem() {
 
   const startPose = useCallback(async () => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    if (poseRef.current) { try { poseRef.current.close(); } catch (_) {} poseRef.current = null; }
+    if (poseRef.current) { try { poseRef.current.close(); } catch (_) { } poseRef.current = null; }
 
     await ensureScripts();
     const Pose = (window as any).Pose;
@@ -400,9 +680,9 @@ export default function RunLabPremiumSystem() {
 
         drawPoseSkeleton(ctx, lm, canvas.width, canvas.height);
 
-        const currentKnee = calcAngle(lm[24], lm[26], lm[28]); 
-        const currentDropRaw = Math.abs(lm[23].y - lm[24].y) * 180; 
-        const currentOverstrideRaw = Math.abs(lm[28].x - lm[24].x) * 100; 
+        const currentKnee = calcAngle(lm[24], lm[26], lm[28]);
+        const currentDropRaw = Math.abs(lm[23].y - lm[24].y) * 180;
+        const currentOverstrideRaw = Math.abs(lm[28].x - lm[24].x) * 100;
 
         if (framesCount.current > 30) {
           if (currentKnee > 120 && currentKnee < maxLockedKnee.current) {
@@ -437,7 +717,7 @@ export default function RunLabPremiumSystem() {
 
         const maxRiskValue = Math.max(computedRisks.runnersKnee, computedRisks.achilles, computedRisks.itBand, computedRisks.shinSplints);
         const coreScore = Math.min(98, Math.max(40, 100 - (maxRiskValue * 0.4)));
-        
+
         setStableScore(Math.round(coreScore));
         setStableKneeAngle(finalKneeAngle);
         setStableHipDrop(Math.round(finalPelvicDrop));
@@ -449,7 +729,17 @@ export default function RunLabPremiumSystem() {
           mob: Math.round(Math.min(100, Math.max(45, 100 - (calcAchillesRisk * 0.3)))),
           bal: Math.round(Math.max(40, 100 - (finalPelvicDrop * 5) - postureMetrics.shoulderTilt))
         });
+const overallScore = Math.round(
+  (
+    subMetrics.eff +
+    subMetrics.hip +
+    subMetrics.knee +
+    subMetrics.mob +
+    subMetrics.bal
+  ) / 5
+);
 
+setStableScore(overallScore);
         const sortedRisks = Object.entries(computedRisks).sort((a, b) => b[1] - a[1]);
         const peakInjuryName = sortedRisks[0][0];
         const peakInjuryScore = sortedRisks[0][1];
@@ -488,7 +778,7 @@ export default function RunLabPremiumSystem() {
     const onLoaded = async () => {
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 360;
-      await video.play().catch(() => {});
+      await video.play().catch(() => { });
       const detect = async () => {
         if (!video.paused && !video.ended) {
           await pose.send({ image: video });
@@ -515,7 +805,7 @@ export default function RunLabPremiumSystem() {
 
   const clearVideo = () => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    if (poseRef.current) { try { poseRef.current.close(); } catch (_) {} poseRef.current = null; }
+    if (poseRef.current) { try { poseRef.current.close(); } catch (_) { } poseRef.current = null; }
     setVideoURL("");
     setStableScore(82);
     setStableKneeAngle(164);
@@ -534,78 +824,201 @@ export default function RunLabPremiumSystem() {
     ss: { color: "#64748b", fontSize: 14, marginBottom: 24, paddingLeft: 44 },
     card: { background: "#091120", border: "1px solid #1e293b", borderRadius: 24, padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.25)" },
     bp: { background: "linear-gradient(135deg, #00e5ff 0%, #0066ff 100%)", color: "#030712", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 15px rgba(0,229,255,0.25)" },
-    courseGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, marginTop: 14 },
+   courseGrid: {
+  display: "grid",
+  gridTemplateColumns:
+  "repeat(auto-fit,minmax(340px,1fr))",
+  gap: 24,
+  marginTop: 24,
+},
     courseCard: { background: "#091120", border: "1px solid #1e293b", borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "0 10px 25px rgba(0,0,0,0.15)" },
     priceTag: { fontSize: 20, fontWeight: 900, color: "#00e5ff" },
     payGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginTop: 14 }
   };
 
-return (
-  <div style={{ position: "relative", minHeight: "100vh", background: "#030712", color: "#f8fafc", fontFamily: "'Sarabun', sans-serif" }}>
-    <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999 }}>
-      <button style={{ cursor: "pointer", padding: "8px 16px" }}>
-        Login
-      </button>
-    </div>
+  return (
+    <div style={{ position: "relative", minHeight: "100vh", background: "#030712", color: "#f8fafc", fontFamily: "'Sarabun', sans-serif" }}>
+  
+  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <a
+      href="/academy"
+      style={{
+        color: "#00e5ff",
+        textDecoration: "none",
+        fontWeight: 700,
+      }}
+    >
+      My Courses
+    </a>
+
+    <UserButton />
+
+      </div>
 
 
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
       {/* HEADER NAVIGATION */}
       <nav style={S.nav}>
         <div style={S.navIn}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#00e5ff", boxShadow: "0 0 12px #00e5ff" }} />
-            <div style={{ fontWeight: 900, fontSize: 22, color: "#fff", letterSpacing: 0.5 }}>RUNLAB <span style={{ fontSize: 12, color: "#00e5ff", fontWeight: 600, background: "rgba(0,229,255,0.1)", padding: "2px 8px", borderRadius: 6, marginLeft: 4 }}>AI CLINIC</span></div>
-          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+  <div
+    style={{
+      fontWeight: 900,
+      fontSize: 22,
+      color: "#fff",
+      letterSpacing: 0.5,
+    }}
+  >
+    RUNLAB
+  </div>
+
+  <div
+    style={{
+      fontSize: 10,
+      color: "#64748b",
+      letterSpacing: 1.5,
+      fontWeight: 700,
+      marginTop: -2,
+    }}
+  >
+    BY DUHA TECHNOLOGY
+  </div>
+</div>
+</div>
           <div style={{ display: "flex", gap: 28, fontSize: 14, fontWeight: 600, color: "#64748b" }}>
             <span style={{ color: "#00e5ff", cursor: "pointer" }}>หน้าแรก</span>
             <span style={{ cursor: "pointer" }}>วิเคราะห์ฟอร์มวิ่ง</span>
             <span style={{ cursor: "pointer" }}>โปรแกรมกายภาพ</span>
-          </div>
-        </div>
-      </nav>
+            <div
+
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+  }}
+>
+ <a
+  href="/academy"
+  style={{
+    color: "#00e5ff",
+    textDecoration: "none",
+    fontWeight: 700,
+    fontSize: 14,
+    padding: "8px 14px",
+    borderRadius: 999,
+    background: "rgba(0,229,255,0.08)",
+    border: "1px solid rgba(0,229,255,0.2)",
+    transition: "all .2s ease",
+  }}
+>
+  📚 Academy
+</a>
+
+ <SignInButton mode="modal">
+  <button
+    style={{
+      background: "#00e5ff",
+      color: "#001018",
+      border: "none",
+      borderRadius: 999,
+      padding: "8px 18px",
+      fontWeight: 800,
+      cursor: "pointer",
+      boxShadow: "0 0 20px rgba(0,229,255,.3)",
+    }}
+  >
+    Login
+  </button>
+</SignInButton>
+</div> {/* ปิด div display:flex gap14 */}
+
+</div> {/* ปิด div nav menu */}
+
+</div> {/* ปิด S.navIn */}
+
+</nav>
 
       {/* HERO SECTION */}
-      <div style={{ ...S.wrap, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 40, padding: "54px 20px 40px", alignItems: "center" }}>
-        <div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(0,229,255,0.08)", border: "1px solid rgba(0,229,255,0.2)", borderRadius: 99, padding: "4px 16px", fontSize: 13, color: "#00e5ff", marginBottom: 20, fontWeight: 600 }}>
-            ✦ AI Body Balance & Injury Prevention
-          </div>
-          
-          <h1 style={{ fontSize: 40, fontWeight: 800, lineHeight: 1.35, marginBottom: 18, color: "#fff" }}>
-            แก้ปัญหาปวดเรื้อรังของนักวิ่ง<br />ด้วยระบบวิเคราะห์<span style={{ background: "linear-gradient(to right, #00e5ff, #0066ff)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>สรีระและการเคลื่อนไหว</span>
-          </h1>
-          
-          <p style={{ fontSize: 15, color: "#94a3b8", lineHeight: 1.75, marginBottom: 0 }}>
-            ถอดรหัสโครงสร้างร่างกายจากรูปถ่ายและวิดีโอตอนวิ่งจริง ระบบจะช่วยล็อกจุดที่มีปัญหาร่วมกับการคำนวณของ AI เพื่อชี้เป้าความเสี่ยงการบาดเจ็บล่วงหน้า พร้อมแนะนำโปรแกรมฟื้นฟูกล้ามเนื้อที่ตรงจุดสำหรับคุณโดยเฉพาะ
-          </p>
-        </div>
+  <div style={{
+  display: "grid",
+  gridTemplateColumns: "1fr 400px",
+  gap: "60px",
+  alignItems: "center",
+  padding: "40px",
+  backgroundColor: "#050a14",
+  color: "#fff",
+  fontFamily: "sans-serif",
+  maxWidth: "1200px",
+  margin: "0 auto"
+}}>
+  
+  {/* ส่วนเนื้อหาซ้าย */}
+  <div>
+    <div style={{ display: "inline-block", padding: "8px 16px", borderRadius: "20px", border: "1px solid #00e5ff", color: "#00e5ff", marginBottom: "20px", fontSize: "14px" }}>
+      ✦ AI Body Balance & Injury Prevention
+    </div>
+    <h1 style={{ fontSize: "40px", marginBottom: "20px" }}>วิเคราะห์ท่าวิ่งด้วย AI แม่นยำสูง</h1>
+    <p style={{ color: "#94a3b8", lineHeight: "1.6", marginBottom: "30px" }}>
+      ถอดรหัสโครงสร้างร่างกายจากรูปถ่ายและวิดีโอตอนวิ่งจริง ระบบจะช่วยล็อกจุดที่มีปัญหาร่วมกับการคำนวณของ AI เพื่อชี้เป้าความเสี่ยงการบาดเจ็บล่วงหน้า พร้อมแนะนำโปรแกรมฟื้นฟูกล้ามเนื้อที่ตรงจุดสำหรับคุณโดยเฉพาะ
+    </p>
 
-        <div style={S.card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div>
-              <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, letterSpacing: 1 }}>RUNLAB REPORT SCORE</div>
-              <div style={{ fontSize: 54, fontWeight: 900, color: "#00e5ff", lineHeight: 1, marginTop: 4 }}>{stableScore || "—"}</div>
-            </div>
-            <Ring v={stableScore} />
-          </div>
-          <div style={{ height: 1, background: "#1e293b", margin: "16px 0" }} />
-          <Bar label="ประสิทธิภาพการจัดระเบียบท่าทางรวม" value={subMetrics.eff} color="linear-gradient(90deg, #00e5ff, #0066ff)" />
-          <Bar label="ความมั่นคงของเชิงกรานและสะโพก (Pelvic Control)" value={subMetrics.hip} color="#f59e0b" />
-          <Bar label="แนวแกนเข่ารับแรงกระแทก (Knee Alignment)" value={subMetrics.knee} color={subMetrics.knee < 60 ? "#ef4444" : "#10b981"} />
-          <Bar label="ความยืดหยุ่นข้อต่อรยางค์ล่าง (Mobility Rate)" value={subMetrics.mob} color="#3b82f6" />
-          <Bar label="ดัชนีความสมดุลซ้าย-ขวา (Symmetry Index)" value={subMetrics.bal} color="#a78bfa" />
+    <div style={{ display: "flex", gap: "15px", marginBottom: "40px" }}>
+      <button style={{ background: "#00e5ff", color: "#000", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "bold", cursor: "pointer" }}>เริ่มวิเคราะห์เลย</button>
+      <button style={{ background: "transparent", color: "#fff", border: "1px solid #334155", padding: "12px 24px", borderRadius: "8px", cursor: "pointer" }}>ดูตัวอย่างรายงาน</button>
+    </div>
+
+    <div style={{ display: "flex", gap: "40px" }}>
+      <div><div style={{ fontSize: "24px", fontWeight: "bold", color: "#00e5ff" }}>AI</div><div style={{ fontSize: "12px", color: "#64748b" }}>วิเคราะห์อัตโนมัติ</div></div>
+      <div><div style={{ fontSize: "24px", fontWeight: "bold", color: "#00e5ff" }}>4</div><div style={{ fontSize: "12px", color: "#64748b" }}>กลุ่มความเสี่ยง</div></div>
+      <div><div style={{ fontSize: "24px", fontWeight: "bold", color: "#00e5ff" }}>24/7</div><div style={{ fontSize: "12px", color: "#64748b" }}>พร้อมใช้งาน</div></div>
+    </div>
+  </div>
+
+  {/* ส่วนการ์ดรายงาน (ขวา) */}
+  <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "30px", borderRadius: "20px", border: "1px solid #334155", backdropFilter: "blur(10px)" }}>
+    <h3 style={{ textAlign: "center", marginBottom: "20px" }}>RUNLAB REPORT SCORE</h3>
+    <div style={{ textAlign: "center", fontSize: "64px", fontWeight: "bold", color: "#00e5ff", marginBottom: "20px" }}>{stableScore}</div>
+    
+    {[
+      { label: "ประสิทธิภาพการจัดระเบียบท่าทางรวม", val: `${stableScore}%` },
+      { label: "ความมั่นคงของเชิงกรานและสะโพก", val: "64%" },
+      { label: "แนวแกนเข่ารับแรงกระแทก", val: "72%" },
+      { label: "ความยืดหยุ่นข้อต่อยางล่าง", val: "72%" },
+      { label: "ดัชนีความสมดุลซ้าย-ขวา", val: "68%" }
+    ].map((item, index) => (
+      <div key={index} style={{ marginBottom: "15px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginBottom: "5px" }}>
+          <span>{item.label}</span>
+          <span>{item.val}</span>
+        </div>
+        <div style={{ height: "6px", background: "#334155", borderRadius: "3px" }}>
+          <div style={{ width: item.val, height: "100%", background: "#00e5ff", borderRadius: "3px" }}></div>
         </div>
       </div>
+    ))}
+  </div>
+</div>
 
       {/* STEP 1: STATIC POSTURE */}
       <div style={{ background: "#050b14", padding: "50px 0", borderTop: "1px solid #1e293b", borderBottom: "1px solid #1e293b" }}>
         <div style={S.wrap}>
           <div style={S.st}><span style={S.sn}>1</span> ตรวจสอบสรีระท่ายืนนิ่ง (Static Posture Calibration)</div>
           <p style={S.ss}>อัปโหลดรูปถ่ายสรีระหลักเพื่อวิเคราะห์ฐานแนวกระดูกและคำนวณค่าน้ำหนักเสริมตัวคูณรายงาน</p>
-          
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 20 }}>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 20, marginBottom: 20 }}>
+            <div
+  style={{
+    ...S.wrap,
+    display: "grid",
+    gridTemplateColumns: "1.1fr 0.9fr",
+    gap: 50,
+    alignItems: "center",
+    padding: "70px 20px",
+  }}
+></div>
             <div style={{ ...S.card, gridColumn: "span 3", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, background: "#070f1e" }}>
               <PoseSlot label="รูปด้านหน้า (Front Profile)" preview={postureImages.front} onFile={(f) => setPostureImages(p => ({ ...p, front: URL.createObjectURL(f) }))} onClear={() => setPostureImages(p => ({ ...p, front: "" }))} />
               <PoseSlot label="รูปด้านข้าง (Side Profile)" preview={postureImages.side} onFile={(f) => setPostureImages(p => ({ ...p, side: URL.createObjectURL(f) }))} onClear={() => setPostureImages(p => ({ ...p, side: "" }))} />
@@ -618,6 +1031,14 @@ return (
               <button onClick={processStaticPosture} style={{ ...S.bp, width: "100%", background: "#10b981", color: "#fff", boxShadow: "0 4px 14px rgba(16,185,129,0.2)" }}>
                 ประมวลผลจุดตรึงสรีระ
               </button>
+              {postureAnalyzed && (
+  <div style={{ marginTop: 20 }}>
+    <OfficeRiskCard
+      risk={officeRisk}
+      level={officeLevel}
+    />
+  </div>
+)}
             </div>
           </div>
         </div>
@@ -699,67 +1120,143 @@ return (
       </div>
 
       {/* STEP 4: RECOVERY PROGRAMS */}
-      <div id="recovery-programs" style={{ padding: "50px 0" }}>
-        <div style={S.wrap}>
-          <div style={S.st}><span style={S.sn}>4</span> โปรแกรมออกกำลังกายฟื้นฟูจำเพาะบุคคลที่แนะนำสำหรับคุณ</div>
-          <p style={S.ss}>คอร์สฟื้นฟูสมดุลความแข็งแรงกล้ามเนื้อ ออกแบบมาเพื่อแก้ปวดและป้องกันจุดเสี่ยงเจ็บของคุณโดยเฉพาะ</p>
+     <div id="recovery-programs" style={{ padding: "50px 0" }}>
+  <div style={S.wrap}>
+    <div style={S.st}>
+      <span style={S.sn}>4</span>
+      โปรแกรมออกกำลังกายฟื้นฟูจำเพาะบุคคลที่แนะนำสำหรับคุณ
+    </div>
 
-          <div style={S.courseGrid}>
-        <div style={S.courseCard}>
+    <p style={S.ss}>
+      คอร์สฟื้นฟูสมดุลความแข็งแรงกล้ามเนื้อ
+      ออกแบบมาเพื่อแก้ปวดและป้องกันจุดเสี่ยงเจ็บของคุณโดยเฉพาะ
+    </p>
+ <div style={S.courseGrid}>
+
+  <div
+    style={{
+      ...S.courseCard,
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      background:
+        "linear-gradient(180deg,#07101f 0%,#0d1727 100%)",
+      border: "1px solid #1e293b",
+    }}
+  >
+  
   <div style={{ padding: 20 }}>
-    <div style={{ 
-      width: "100%", 
-      height: 140, 
-      background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", 
-      borderRadius: 14, 
-      display: "flex", 
-      alignItems: "center", 
-      justifyContent: "center", 
-      fontSize: 36, 
-      marginBottom: 16, 
-      border: "1px solid #1e293b" 
-    }}>🦵</div>
-    
-    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>
+   
+    <img
+  src="/courses/knee.jpg"
+  alt="Knee Recovery"
+  style={{
+    width: "100%",
+    height: 220,
+    objectFit: "cover",
+    borderRadius: 14,
+  }}
+/>
+
+    <h3
+      style={{
+        fontSize: 16,
+        fontWeight: 700,
+        color: "#fff",
+        marginBottom: 8,
+      }}
+    >
       PRO-KNEE: โปรแกรมแก้ปวดเข่าสะบ้า
     </h3>
-    
-    <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>
-      ลดแรงกดเค้นที่ผิวข้อสะบ้าเข่า เสริมความแข็งแรงกล้ามเนื้อรอบหน้าขาเพื่อความมั่นคงในการลงน้ำหนัก
+
+    <p
+      style={{
+        fontSize: 12,
+        color: "#64748b",
+        lineHeight: 1.6,
+        margin: 0,
+        minHeight: 70,
+      }}
+    >
+      ลดแรงกดเค้นที่ผิวข้อสะบ้าเข่า
+      เสริมความแข็งแรงกล้ามเนื้อรอบหน้าขา
+      เพื่อความมั่นคงในการลงน้ำหนัก
     </p>
-    
-    <div style={{ 
-      display: "flex", 
-      gap: 12, 
-      fontSize: 11, 
-      color: "#94a3b8", 
-      marginTop: 14, 
-      background: "#040914", 
-      padding: "6px 12px", 
-      borderRadius: 8, 
-      width: "fit-content" 
-    }}>
+
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        fontSize: 11,
+        color: "#94a3b8",
+        marginTop: 14,
+        background: "#040914",
+        padding: "6px 12px",
+        borderRadius: 8,
+        width: "fit-content",
+      }}
+    >
       <span>⏱️ 6 สัปดาห์</span>
       <span>📹 24 วิดีโอ</span>
     </div>
   </div>
-  
-  <div style={{ 
-    background: "#0d1727", 
-    padding: "16px 20px", 
-    display: "flex", 
-    justifyContent: "space-between", 
-    alignItems: "center",
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14
-  }}>
-    <span style={{ fontSize: 14, color: "#38bdf8" }}>เริ่มฝึกเลย</span>
+
+  <div
+    style={{
+      background: "#0d1727",
+      padding: "16px 20px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderTop: "1px solid #1e293b",
+    }}
+  >
+    
+    <div style={S.priceTag}>
+      1,490{" "}
+      <span
+        style={{
+          fontSize: 12,
+          color: "#64748b",
+          fontWeight: 400,
+        }}
+      >
+        THB
+      </span>
+    </div>
+
+    <button
+      onClick={() =>
+        setSelectedCourse({
+          name: "PRO-KNEE",
+          price: 1490,
+        })
+      }
+      style={{
+        ...S.bp,
+        padding: "8px 16px",
+        fontSize: 12,
+      }}
+    >
+      เลือกคอร์สนี้
+    </button>
   </div>
-</div>
+
+  </div>
+
 
             <div style={S.courseCard}>
               <div style={{ padding: 20 }}>
-                <div style={{ width: "100%", height: 140, background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, marginBottom: 16, border: "1px solid #1e293b" }}>🍑</div>
+                <img
+  src="/courses/hip.jpg"
+  alt="Hip Stability"
+  style={{
+    width: "100%",
+    height: 220,
+    objectFit: "cover",
+    borderRadius: 14,
+  }}
+/>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>CORE-HIP: เพิ่มความมั่นคงของสะโพก</h3>
                 <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>แก้สภาวะสะโพกทรุดขณะวิ่ง เพิ่มการควบคุมแกนเชิงกรานและจัดระเบียบท่าทางช่วงล่าง</p>
                 <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
@@ -768,13 +1265,36 @@ return (
               </div>
               <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
                 <div style={S.priceTag}>1,290 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
-                <button style={{ ...S.bp, padding: "8px 16px", fontSize: 12 }}>เลือกคอร์สนี้</button>
+                <button
+                  onClick={() =>
+                    setSelectedCourse({
+                      name: "CORE-HIP",
+                      price: 1290,
+                    })
+                  }
+                  style={{
+                    ...S.bp,
+                    padding: "8px 16px",
+                    fontSize: 12,
+                  }}
+                >
+                  เลือกคอร์สนี้
+                </button>
               </div>
             </div>
 
             <div style={S.courseCard}>
               <div style={{ padding: 20 }}>
-                <div style={{ width: "100%", height: 140, background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, marginBottom: 16, border: "1px solid #1e293b" }}>🧘‍♂️</div>
+                <img
+  src="/courses/mobility.jpg"
+  alt="Mobility Training"
+  style={{
+    width: "100%",
+    height: 220,
+    objectFit: "cover",
+    borderRadius: 14,
+  }}
+/>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>RUN-MOBILITY: เพิ่มมุมเคลื่อนไหวข้อต่อ</h3>
                 <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>เพิ่มความยืดหยุ่นให้ข้อเท้าและข้อสะโพก ช่วยลดการดึงรั้งและทำให้ก้าววิ่งไหลลื่นขึ้น</p>
                 <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
@@ -783,339 +1303,346 @@ return (
               </div>
               <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
                 <div style={S.priceTag}>990 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
-                <button style={{ ...S.bp, padding: "8px 16px", fontSize: 12 }}>เลือกคอร์สนี้</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-{/* STEP 5: PAYMENT GATEWAY */}
-<div
+                <button
+  onClick={() =>
+    setSelectedCourse({
+      name: "RUN-MOBILITY",
+      price: 990,
+    })
+  }
   style={{
-    background: "#050b14",
-    padding: "50px 0",
-    borderTop: "1px solid #1e293b",
+    ...S.bp,
+    padding: "8px 16px",
+    fontSize: 12,
   }}
 >
-  <div style={S.wrap}>
+  เลือกคอร์สนี้
+</button>
+</div> {/* RUN-MOBILITY */}
 
-    <div style={S.st}>
-      <span style={S.sn}>5</span>
-      ชำระเงินและอัปโหลดสลิปเพื่อเปิดใช้งานระบบ
-    </div>
+</div> {/* courseGrid */}
 
-    <p style={S.ss}>
-      สแกนโอนเงินผ่าน QR Code ด้านล่างเพื่อยืนยันเปิดสิทธิ์เข้าใช้โปรแกรมฟื้นฟูโดยอัตโนมัติ
-    </p>
+</div> {/* wrap */}
+
+</div> {/* recovery-programs */}
+
+
+        {/* STEP 5: PAYMENT GATEWAY */}
+        <div
+          style={{
+            background: "#050b14",
+            padding: "50px 0",
+            borderTop: "1px solid #1e293b",
+          }}
+        >
+          <div style={S.wrap}>
+
+            <div style={S.st}>
+              <span style={S.sn}>5</span>
+              ชำระเงินและอัปโหลดสลิปเพื่อเปิดใช้งานระบบ
+            </div>
+
+            <p style={S.ss}>
+              สแกนโอนเงินผ่าน QR Code ด้านล่างเพื่อยืนยันเปิดสิทธิ์เข้าใช้โปรแกรมฟื้นฟูโดยอัตโนมัติ
+            </p>
 
     <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
-        gap: 20,
-        marginTop: 24,
-      }}
-    >
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: 20,
+    marginTop: 24,
+    alignItems: "stretch",
+  }}
+>
 
-      {/* QR CARD */}
-      <div
-        style={{
-          ...S.card,
-          background: "#070f1e",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 12,
-            color: "#94a3b8",
-            fontWeight: 700,
-            marginBottom: 12,
-          }}
-        >
-          PROMPTPAY OFFICIAL QR
-        </div>
-
-        <div
-          style={{
-            width: 150,
-            height: 150,
-            background: "#fff",
-            borderRadius: 12,
-            padding: 10,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Image
-            src="/promptpay-qr.png"
-            alt="PromptPay QR Code"
-            width={130}
-            height={130}
-            style={{ objectFit: "contain" }}
-            priority
-          />
-        </div>
-
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: "#fff",
-            marginTop: 14,
-          }}
-        >
-          ชื่อบัญชี: ปริญญา ปานศิริ
-        </div>
-
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 900,
-            color: "#00e5ff",
-            marginTop: 4,
-          }}
-        >
-          08X-XXX-XXXX
-        </div>
-      </div>
-
-      {/* ORDER SUMMARY */}
-      <div
-        style={{
-          ...S.card,
-          background: "#070f1e",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontSize: 12,
-              color: "#64748b",
-              fontWeight: 700,
-              marginBottom: 10,
-            }}
-          >
-            สรุปรายการคอร์สที่เลือก
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 14,
-              background: "#040914",
-              border: "1px solid #1e293b",
-              padding: 16,
-              borderRadius: 16,
-            }}
-          >
-            <div style={{ fontSize: 28 }}>🦵</div>
-
-            <div>
-              <h4
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#fff",
-                  margin: 0,
-                }}
-              >
-                โปรแกรมแก้ปวดเข่าสะบ้าสำหรับนักวิ่ง
-              </h4>
-
+              {/* QR CARD */}
               <div
                 style={{
-                  fontSize: 18,
-                  fontWeight: 900,
-                  color: "#00e5ff",
-                  marginTop: 6,
+                  ...S.card,
+                  background: "#070f1e",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
                 }}
               >
-                1,490 THB
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#94a3b8",
+                    fontWeight: 700,
+                    marginBottom: 12,
+                  }}
+                >
+                  PROMPTPAY OFFICIAL QR
+                </div>
+
+                <div
+                  style={{
+                    width: 150,
+                    height: 150,
+                    background: "#fff",
+                    borderRadius: 12,
+                    padding: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Image
+                    src="/promptpay-qr.png"
+                    alt="PromptPay QR Code"
+                    width={130}
+                    height={130}
+                    style={{ objectFit: "contain" }}
+                    priority
+                  />
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#fff",
+                    marginTop: 14,
+                  }}
+                >
+                  ชื่อบัญชี: ปริญญา ปานศิริ
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 900,
+                    color: "#00e5ff",
+                    marginTop: 4,
+                  }}
+                >
+                  08X-XXX-XXXX
+                </div>
               </div>
+
+              {/* ORDER SUMMARY */}
+              <div
+                style={{
+                  ...S.card,
+                  background: "#070f1e",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#64748b",
+                      fontWeight: 700,
+                      marginBottom: 10,
+                    }}
+                  >
+                    สรุปรายการคอร์สที่เลือก
+                  </div>
+
+                 <div>
+  <h4
+    style={{
+      fontSize: 14,
+      fontWeight: 700,
+      color: "#fff",
+      margin: 0,
+    }}
+  >
+    {selectedCourse.name}
+  </h4>
+
+  
+                        <div
+                          style={{
+                          fontSize: 18,
+                          fontWeight: 900,
+                          color: "#00e5ff",
+                          marginTop: 6,
+                        }}
+                      >
+                        {selectedCourse.price} THB
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: "#475569",
+                    lineHeight: 1.6,
+                    margin: "14px 0 0",
+                  }}
+                >
+                  * หลังตรวจสอบยอดชำระเงินเรียบร้อยแล้ว ระบบอัตโนมัติจะทำการปลดล็อกคอร์สและส่งข้อมูลเข้าสู่อีเมลของคุณทันที
+                </p>
+              </div>
+
+              {/* SLIP UPLOAD */}
+              <div
+                style={{
+                  ...S.card,
+                  background: "#070f1e",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#64748b",
+                    fontWeight: 700,
+                    marginBottom: 10,
+                  }}
+                >
+                  อัปโหลดสลิปการโอนเงิน (Upload Slip)
+                </div>
+
+                <div
+                  style={{
+                    position: "relative",
+                    border: "2px dashed #223554",
+                    borderRadius: 16,
+                    padding: "20px 12px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#040914",
+                    height: 140,
+                  }}
+                >
+                  {slipImage ? (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        position: "relative",
+                      }}
+                    >
+                      <img
+                        src={slipImage}
+                        alt="Slip"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          borderRadius: 8,
+                        }}
+                      />
+
+                      <button
+                        onClick={() => setSlipImage("")}
+                        style={{
+                          position: "absolute",
+                          top: -4,
+                          right: -4,
+                          background: "rgba(239,68,68,0.9)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "2px 6px",
+                          fontSize: 9,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ลบรูป
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        gap: 6,
+                      }}
+                    >
+                      <div style={{ fontSize: 26 }}>🧾</div>
+
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "#e2e8f0",
+                        }}
+                      >
+                        คลิกเพื่อเลือกไฟล์สลิป
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: "#475569",
+                        }}
+                      >
+                        รองรับไฟล์ JPG, PNG
+                      </div>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setSlipImage(URL.createObjectURL(f));
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (slipImage) {
+                      alert("ระบบได้รับไฟล์สลิปแล้ว กำลังส่งตรวจความถูกต้องอัตโนมัติครับบอส");
+                    } else {
+                      alert("กรุณาแนบภาพสลิปเงินโอนก่อนครับบอส");
+                    }
+                  }}
+                  style={{
+                    ...S.bp,
+                    width: "100%",
+                    marginTop: 14,
+                  }}
+                >
+                  ส่งสลิปเพื่อยืนยันการชำระเงิน
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
 
-        <p
-          style={{
-            fontSize: 11,
-            color: "#475569",
-            lineHeight: 1.6,
-            margin: "14px 0 0",
-          }}
-        >
-          * หลังตรวจสอบยอดชำระเงินเรียบร้อยแล้ว ระบบอัตโนมัติจะทำการปลดล็อกคอร์สและส่งข้อมูลเข้าสู่อีเมลของคุณทันที
-        </p>
-      </div>
-
-      {/* SLIP UPLOAD */}
-      <div
-        style={{
-          ...S.card,
-          background: "#070f1e",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 12,
-            color: "#64748b",
-            fontWeight: 700,
-            marginBottom: 10,
-          }}
-        >
-          อัปโหลดสลิปการโอนเงิน (Upload Slip)
-        </div>
-
-        <div
-          style={{
-            position: "relative",
-            border: "2px dashed #223554",
-            borderRadius: 16,
-            padding: "20px 12px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#040914",
-            height: 140,
-          }}
-        >
-          {slipImage ? (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                position: "relative",
-              }}
-            >
-              <img
-                src={slipImage}
-                alt="Slip"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  borderRadius: 8,
-                }}
-              />
-
-              <button
-                onClick={() => setSlipImage("")}
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  right: -4,
-                  background: "rgba(239,68,68,0.9)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "2px 6px",
-                  fontSize: 9,
-                  cursor: "pointer",
-                }}
-              >
-                ลบรูป
-              </button>
-            </div>
-          ) : (
-            <label
-              style={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                gap: 6,
-              }}
-            >
-              <div style={{ fontSize: 26 }}>🧾</div>
-
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#e2e8f0",
-                }}
-              >
-                คลิกเพื่อเลือกไฟล์สลิป
+        {/* FOOTER & COPYRIGHT SECTION */}
+        <footer style={{ background: "#020613", borderTop: "1px solid #1e293b", padding: "40px 0 30px" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ fontWeight: 900, fontSize: 18, color: "#fff", letterSpacing: 0.5 }}>
+                RUNLAB <span style={{ fontSize: 12, color: "#00e5ff", fontWeight: 600 }}>BY บันทึกของโค้ช</span>
               </div>
-
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "#475569",
-                }}
-              >
-                รองรับไฟล์ JPG, PNG
-              </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) {
-                    setSlipImage(URL.createObjectURL(f));
-                  }
-                }}
-              />
-            </label>
-          )}
-        </div>
-
-        <button
-          onClick={() => {
-            if (slipImage) {
-              alert("ระบบได้รับไฟล์สลิปแล้ว กำลังส่งตรวจความถูกต้องอัตโนมัติครับบอส");
-            } else {
-              alert("กรุณาแนบภาพสลิปเงินโอนก่อนครับบอส");
-            }
-          }}
-          style={{
-            ...S.bp,
-            width: "100%",
-            marginTop: 14,
-          }}
-        >
-          ส่งสลิปเพื่อยืนยันการชำระเงิน
-        </button>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-      {/* FOOTER & COPYRIGHT SECTION */}
-      <footer style={{ background: "#020613", borderTop: "1px solid #1e293b", padding: "40px 0 30px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={{ fontWeight: 900, fontSize: 18, color: "#fff", letterSpacing: 0.5 }}>
-              RUNLAB <span style={{ fontSize: 12, color: "#00e5ff", fontWeight: 600 }}>BY บันทึกของโค้ช</span>
+              <p style={{ fontSize: 12, color: "#475569", margin: 0, textAlign: "center" }}>
+                ระบบวิเคราะห์สรีระและฟอร์มการวิ่งเพื่อการป้องกันอาการบาดเจ็บอย่างตรงจุด
+              </p>
             </div>
-            <p style={{ fontSize: 12, color: "#475569", margin: 0, textAlign: "center" }}>
-              ระบบวิเคราะห์สรีระและฟอร์มการวิ่งเพื่อการป้องกันอาการบาดเจ็บอย่างตรงจุด
-            </p>
+            <div style={{ width: "100%", maxWidth: 300, height: 1, background: "linear-gradient(to right, transparent, #1e293b, transparent)" }} />
+            <div style={{ fontSize: 12, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
+              © {new Date().getFullYear()} <strong>Runlab by บันทึกของโค้ช</strong>. All Rights Reserved.
+            </div>
           </div>
-          <div style={{ width: "100%", maxWidth: 300, height: 1, background: "linear-gradient(to right, transparent, #1e293b, transparent)" }} />
-               <div style={{ fontSize: 12, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
-            © {new Date().getFullYear()} <strong>Runlab by บันทึกของโค้ช</strong>. All Rights Reserved.
-          </div>
-        </div>
-      </footer>
+        </footer>
 
-    </div>
-  );
+      </div>
+      );
 }
