@@ -839,8 +839,24 @@ sn: {
   height: 32,
 },
     sn: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, background: "linear-gradient(135deg, #00e5ff 0%, #0066ff 100%)", color: "#030712", borderRadius: 10, fontWeight: 900, fontSize: 14, marginRight: 12, boxShadow: "0 4px 14px rgba(0,229,255,0.3)" },
-    st: { fontSize: 22, fontWeight: 800, display: "flex", alignItems: "center", marginBottom: 6, color: "#fff" },
-    ss: { color: "#64748b", fontSize: 14, marginBottom: 24, paddingLeft: 44 },
+    st: {
+  fontSize: isMobile ? 16 : 22,
+  fontWeight: 800,
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 12,
+  marginBottom: 6,
+  color: "#fff",
+  flexWrap: "wrap",
+  lineHeight: 1.3,
+},
+
+ss: {
+  color: "#64748b",
+  fontSize: 14,
+  marginBottom: 24,
+  paddingLeft: 44,
+},
     card: { background: "#091120", border: "1px solid #1e293b", borderRadius: 24, padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.25)" },
     bp: { background: "linear-gradient(135deg, #00e5ff 0%, #0066ff 100%)", color: "#030712", border: "none", borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 15px rgba(0,229,255,0.25)" },
    courseGrid: {
