@@ -859,7 +859,11 @@ setStableScore(overallScore);
       My Courses
     </a>
 
-    <UserButton />
+    <a href="/academy">Academy</a>
+
+<button style={S.bp}>
+  Login
+</button>
 
       </div>
 
@@ -925,7 +929,7 @@ setStableScore(overallScore);
   📚 Academy
 </a>
 
- <SignInButton mode="modal">
+
   <button
     style={{
       background: "#00e5ff",
@@ -940,7 +944,7 @@ setStableScore(overallScore);
   >
     Login
   </button>
-</SignInButton>
+
 </div> {/* ปิด div display:flex gap14 */}
 
 </div> {/* ปิด div nav menu */}
