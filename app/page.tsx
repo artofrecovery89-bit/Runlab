@@ -57,7 +57,7 @@ interface RunLabReport {
  coachComment: string
 }
 }
-import PdfReport from "./components/PdfReport";
+// import PdfReport from "./components/PdfReport";
 
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
