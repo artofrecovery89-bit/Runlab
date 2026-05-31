@@ -1,5 +1,64 @@
 "use client";
 
+interface RunLabReport {
+  user: {
+    name?: string;
+    age?: number;
+    gender?: string;
+  };
+
+  staticAnalysis: {
+    shoulderTilt: number;
+    pelvicTilt: number;
+    kneeValgus: number;
+    footRotation: number;
+    forwardHead: number;
+  };
+
+  dynamicAnalysis: {
+    kneeAngle: number;
+    hipDrop: number;
+    overstride: number;
+    score: number;
+  };
+
+  officeSyndrome: {
+    risk: number;
+    level: string;
+  };
+
+  injuryRisk: {
+    runnersKnee: number;
+    achilles: number;
+    itBand: number;
+    shinSplints: number;
+  };
+
+  clinicalReport: {
+ overallScore: number
+
+ movementQuality: string
+
+ primaryRisk: {
+   condition: string
+   risk: number
+ }
+
+ keyFindings: string[]
+
+ rootCauses: string[]
+
+ correctiveExercises: string[]
+
+ runningRecommendations: string[]
+
+ nextAction: string
+
+ coachComment: string
+}
+}
+import PdfReport from "./components/PdfReport";
+
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
 
@@ -27,7 +86,6 @@ function ensureScripts() {
   );
   return scriptsPromise;
 }
-
 
 /// 1. ฟังก์ชันคำนวณมุมมาตรฐาน (ใช้ได้กับทุกท่า)
 const calcAngle = (a: any, b: any, c: any) => {
@@ -415,7 +473,48 @@ function Stat({ label, val, color }: { label: string; val: string | number | nul
     </div>
   );
 }
+interface RunLabReport {
+  user: {
+    name?: string;
+    age?: number;
+    gender?: string;
+  };
 
+  staticAnalysis: {
+    shoulderTilt: number;
+    pelvicTilt: number;
+    kneeValgus: number;
+    footRotation: number;
+    forwardHead: number;
+  };
+
+  dynamicAnalysis: {
+    kneeAngle: number;
+    hipDrop: number;
+    overstride: number;
+    score: number;
+  };
+
+  officeSyndrome: {
+    risk: number;
+    level: string;
+  };
+
+  injuryRisk: {
+    runnersKnee: number;
+    achilles: number;
+    itBand: number;
+    shinSplints: number;
+  };
+
+  summary: {
+    score: number;
+    riskLevel: string;
+    diagnosis: string;
+    recommendation: string;
+    analysisSummary: string;
+  };
+}
 interface PoseSlotProps {
   label: string;
   preview: string;
@@ -561,25 +660,56 @@ function InteractiveAnatomy({ risks }: { risks: { runnersKnee: number; achilles:
 }
 
 export default function RunLabPremiumSystem() {
+
   const [isMobile, setIsMobile] = useState(false);
 
-useEffect(() => {
-  const checkMobile = () => {
-    setIsMobile(window.innerWidth < 768);
-  };
+  useEffect(() => {
 
-  checkMobile();
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
 
-  window.addEventListener("resize", checkMobile);
+    checkMobile();
 
-  return () => {
-    window.removeEventListener("resize", checkMobile);
-  };
-}, []);
+    window.addEventListener("resize", checkMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+
+  }, []);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
   const poseRef = useRef<any>(null);
   const rafRef = useRef<number | null>(null);
+  const captureFrame = () => {
+  if (!videoRef.current) return;
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width = videoRef.current.videoWidth;
+  canvas.height = videoRef.current.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) return;
+
+  ctx.drawImage(
+    videoRef.current,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+const imageData = canvas.toDataURL("image/png");
+
+console.log("CAPTURED", imageData);
+
+setCapturedImage(imageData);
+};
+ 
 
   const framesCount = useRef<number>(0);
   const maxLockedKnee = useRef<number>(156);
@@ -599,9 +729,26 @@ useEffect(() => {
 const [officeLevel, setOfficeLevel] = useState("LOW");
   const [stableScore, setStableScore] = useState<number>(0);
   const [stableRiskLevel, setStableRiskLevel] = useState<string>("MEDIUM");
+  const [aiReport, setAiReport] = useState({
+  executiveSummary: "",
+  rootCause: "",
+  recommendation: "",
+  runningAdvice: "",
+});
+const [primaryRiskData, setPrimaryRiskData] = useState({
+  name: "",
+  value: 0,
+});
+const [confidenceScore, setConfidenceScore] = useState(0);
   const [stableKneeAngle, setStableKneeAngle] = useState<number | null>(164);
   const [stableHipDrop, setStableHipDrop] = useState<number | null>(0);
 
+const [reportData, setReportData] =
+  useState<RunLabReport | null>(null);
+
+
+  const [capturedImage, setCapturedImage] =
+  useState<string>("");
   const [injuryRisks, setInjuryRisks] = useState({ runnersKnee: 78, achilles: 24, itBand: 64, shinSplints: 15 });
   const [subMetrics, setSubMetrics] = useState({ eff: 82, hip: 64, knee: 72, mob: 72, bal: 68 });
 
@@ -623,32 +770,160 @@ const [officeLevel, setOfficeLevel] = useState("LOW");
       if (poseRef.current) { try { poseRef.current.close(); } catch (_) { } }
     };
   }, []);
+const analyzeImage = async (imageSrc: string) => {
 
-  const processStaticPosture = () => {
-    if (!postureImages.front && !postureImages.side && !postureImages.back) {
-      alert("กรุณาอัปโหลดรูปท่ายืนเพื่อคำนวณครับ");
-      return;
-    }
-    const processStaticPosture = async () => {
+  await ensureScripts();
 
-  setStableScore(82);
+  const Pose = (window as any).Pose;
 
-  setOfficeRisk(72);
+  return new Promise<any>((resolve) => {
 
-  setOfficeLevel("MEDIUM");
+    const img = new window.Image();
 
-  setPostureAnalyzed(true);
-};
-    const simulatedCalibration = {
-      shoulderTilt: postureImages.front ? 3 : 0,
-      pelvicTilt: postureImages.back ? 5 : 0,
-      kneeValgus: postureImages.front ? 8 : 0,
-      footRotation: postureImages.back ? 6 : 0,
-      forwardHead: postureImages.side ? 5 : 0
+    img.src = imageSrc;
+ img.onerror = () => {
+      console.error("Image load failed");
+      resolve(null);
     };
-    setPostureMetrics(simulatedCalibration);
-    setPostureAnalyzed(true);
-  };
+    img.onload = async () => {
+
+      const pose = new Pose({
+        locateFile: (file: string) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+      });
+
+      pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
+
+      pose.onResults((results: any) => {
+if (!capturedImage && canvasRef.current) {
+  const image =
+    canvasRef.current.toDataURL("image/png");
+
+  setCapturedImage(image);
+}
+  resolve(results.poseLandmarks || null);
+
+});
+
+      await pose.send({ image: img });
+    };
+  });
+};
+const processStaticPosture = async () => {
+
+  if (
+    !postureImages.front &&
+    !postureImages.side &&
+    !postureImages.back
+  ) {
+    alert("กรุณาอัปโหลดรูปท่ายืนเพื่อคำนวณครับ");
+    return;
+  }
+
+  try {
+
+    let frontLandmarks = null;
+    let sideLandmarks = null;
+    let backLandmarks = null;
+
+  let shoulderTilt = 0;
+let pelvicTilt = 0;
+let kneeValgus = 0;
+let footRotation = 0;
+let forwardHead = 0;
+
+   
+    // if (postureImages.front) {
+//   frontLandmarks = await analyzeImage(postureImages.front);
+// }
+
+// if (postureImages.side) {
+//   sideLandmarks = await analyzeImage(postureImages.side);
+// }
+
+// if (postureImages.back) {
+//   backLandmarks = await analyzeImage(postureImages.back);
+// }
+
+    console.log("front image", postureImages.front);
+console.log("side image", postureImages.side);
+console.log("back image", postureImages.back);
+// Shoulder Tilt
+if (frontLandmarks) {
+  shoulderTilt =
+    Math.abs(
+      frontLandmarks[11].y -
+      frontLandmarks[12].y
+    ) * 100;
+}
+
+// Pelvic Tilt
+if (backLandmarks) {
+  pelvicTilt =
+    Math.abs(
+      backLandmarks[23].y -
+      backLandmarks[24].y
+    ) * 100;
+}
+
+// Forward Head
+if (sideLandmarks) {
+  forwardHead = calcHeadAngle(
+    sideLandmarks[7],
+    sideLandmarks[11]
+  );
+}
+
+// Knee Valgus
+if (frontLandmarks) {
+  kneeValgus =
+    Math.abs(
+      calcAngle(
+        frontLandmarks[23],
+        frontLandmarks[25],
+        frontLandmarks[27]
+      ) - 180
+    ) / 2;
+}
+// Foot Rotation
+if (backLandmarks) {
+  footRotation =
+    Math.abs(
+      backLandmarks[31].x -
+      backLandmarks[32].x
+    ) * 100;
+}
+   
+setPostureMetrics({
+  shoulderTilt: 4,
+  pelvicTilt: 5,
+  kneeValgus: 6,
+  footRotation: 3,
+  forwardHead: 12,
+});
+
+setPostureAnalyzed(true);
+
+console.log({
+  shoulderTilt,
+  pelvicTilt,
+  kneeValgus,
+  footRotation,
+  forwardHead,
+});// คำนวณค่าต่างๆ ต่อ
+
+  } catch (err) {
+
+    console.error(err);
+
+  }
+};
+
 
   const startPose = useCallback(async () => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -799,6 +1074,21 @@ setStableScore(overallScore);
   }, [postureMetrics]);
 
   useEffect(() => { if (videoURL) startPose(); }, [videoURL, startPose]);
+  useEffect(() => {
+
+  generateReport();
+
+}, [
+  postureMetrics,
+  injuryRisks,
+  stableScore,
+  stableRiskLevel,
+  diagnosis,
+  recommendation,
+  analysisSummary,
+  officeRisk,
+  officeLevel
+]);
 
   const handleVideoFile = async (file: File) => {
     if (!file) return;
@@ -819,6 +1109,214 @@ setStableScore(overallScore);
     setStableRiskLevel("MEDIUM");
     setInjuryRisks({ runnersKnee: 78, achilles: 24, itBand: 64, shinSplints: 15 });
   };
+const generateReport = () => {
+
+  const report: RunLabReport = {
+
+    user: {},
+
+    staticAnalysis: {
+      shoulderTilt: postureMetrics.shoulderTilt,
+      pelvicTilt: postureMetrics.pelvicTilt,
+      kneeValgus: postureMetrics.kneeValgus,
+      footRotation: postureMetrics.footRotation,
+      forwardHead: postureMetrics.forwardHead,
+    },
+
+    dynamicAnalysis: {
+      kneeAngle: stableKneeAngle || 0,
+      hipDrop: stableHipDrop || 0,
+      overstride: maxLockedOverstride.current,
+      score: stableScore,
+    },
+
+    officeSyndrome: {
+      risk: officeRisk,
+      level: officeLevel,
+    },
+
+    injuryRisk: {
+      runnersKnee: injuryRisks.runnersKnee,
+      achilles: injuryRisks.achilles,
+      itBand: injuryRisks.itBand,
+      shinSplints: injuryRisks.shinSplints,
+    },
+
+    summary: {
+      score: stableScore,
+      riskLevel: stableRiskLevel,
+      diagnosis,
+      recommendation,
+      analysisSummary,
+    },
+  };
+
+  setReportData(report);
+};
+
+// 👇 วางตรงนี้
+const generateAIReport = () => {
+  captureFrame();
+
+  const rootCauses: string[] = [];
+  const exercises: string[] = [];
+  const advice: string[] = [];
+
+  // Root Cause Engine
+
+  if (stableHipDrop !== null && stableHipDrop > 3) {
+    rootCauses.push("Hip Stability Deficit");
+    exercises.push("Clamshell");
+    exercises.push("Monster Walk");
+  }
+
+  if (postureMetrics.kneeValgus > 5) {
+    rootCauses.push("Dynamic Knee Valgus");
+    exercises.push("Step Down");
+    exercises.push("Single Leg Squat");
+  }
+
+  if (maxLockedOverstride.current > 10) {
+    rootCauses.push("Excessive Overstride");
+    exercises.push("Cadence Drill");
+    exercises.push("A Skip");
+  }
+const confidence =
+  Math.min(
+    95,
+    60 + rootCauses.length * 10
+  );
+  if (postureMetrics.footRotation > 5) {
+    rootCauses.push("Foot Control Deficit");
+    exercises.push("Single Leg Balance");
+  }
+
+  // Running Advice
+
+  if (maxLockedOverstride.current > 10) {
+    advice.push("เพิ่ม Cadence 5-7%");
+  }
+
+  if (stableHipDrop !== null && stableHipDrop > 3) {
+    advice.push("พัฒนาความแข็งแรงของสะโพก");
+  }
+
+  if (postureMetrics.kneeValgus > 5) {
+    advice.push("ฝึกควบคุมแนวเข่าระหว่างลงน้ำหนัก");
+  }
+
+  // หา Primary Risk
+
+  const risks = [
+    { name: "Runner's Knee", value: injuryRisks.runnersKnee },
+    { name: "IT Band Syndrome", value: injuryRisks.itBand },
+    { name: "Achilles Tendinopathy", value: injuryRisks.achilles },
+    { name: "Shin Splints", value: injuryRisks.shinSplints },
+  ];
+
+  const primaryRisk = risks.sort(
+    (a, b) => b.value - a.value
+  )[0];
+setPrimaryRiskData(primaryRisk);
+  // Executive Sconst confidence =
+  Math.min(
+    95,
+    60 + rootCauses.length * 10
+  );
+const finalReport = {
+  score: stableScore,
+  riskLevel: stableRiskLevel,
+  confidence,
+  primaryRisk, // ✅ ใช้ตัวนี้
+  rootCauses,
+  exercises,
+  advice,
+};
+
+localStorage.setItem(
+  "runlab-report",
+  JSON.stringify(finalReport)
+);
+console.log("REPORT SAVED");
+console.log(finalReport);
+  const executiveSummary = `
+จากการวิเคราะห์การเคลื่อนไหว พบว่าคุณมี Movement Score ${stableScore}/100
+
+ความเสี่ยงหลักคือ ${primaryRisk.name}
+(${primaryRisk.value}%)
+
+ปัจจัยสำคัญที่ตรวจพบ ได้แก่
+
+${rootCauses.join(", ")}
+
+แนะนำให้ปรับรูปแบบการเคลื่อนไหวและเสริมสร้างความแข็งแรงเฉพาะจุดเพื่อลดความเสี่ยงการบาดเจ็บในอนาคต
+`;
+setConfidenceScore(confidence);
+
+  setAiReport({
+    executiveSummary,
+    rootCause: rootCauses.join(" • "),
+    recommendation: [...new Set(exercises)].join(" • "),
+    runningAdvice: advice.join(" • "),
+  });
+
+};
+
+
+const downloadReport = async () => {
+  const html2canvas =
+    (await import("html2canvas")).default;
+
+  const { jsPDF } =
+    await import("jspdf");
+console.log(document.body.innerHTML.includes("report-export"));
+  const reportElement =
+  document.querySelector(
+    "#report-export"
+  );
+  console.log(reportElement);
+
+  if (!reportElement) {
+    alert("Report not found");
+    return;
+  }
+
+  const canvas =
+    await html2canvas(reportElement, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#050b14",
+    });
+
+  const imgData =
+    canvas.toDataURL("image/png");
+
+  const pdf = new jsPDF(
+    "p",
+    "mm",
+    "a4"
+  );
+
+  const pdfWidth =
+    pdf.internal.pageSize.getWidth();
+
+  const pdfHeight =
+    (canvas.height * pdfWidth) /
+    canvas.width;
+
+  pdf.addImage(
+    imgData,
+    "PNG",
+    0,
+    0,
+    pdfWidth,
+    pdfHeight
+  );
+
+  pdf.save(
+    `RUNLAB_REPORT_${Date.now()}.pdf`
+  );
+};
 
   const S = {
     page: { minHeight: "100vh", background: "#030712", color: "#f8fafc", fontFamily: "'Sarabun', sans-serif" },
@@ -1053,6 +1551,7 @@ gap: 10,}}>
 
           <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 20, marginBottom: 20 }}>
             <div
+            
   style={{
     ...S.wrap,
     display: "grid",
@@ -1155,6 +1654,283 @@ gap: 10,}}>
       <div style={{ background: "#050b14", padding: "50px 0", borderTop: "1px solid #1e293b" }}>
         <div style={S.wrap}>
           <div style={S.st}><span style={S.sn}>3</span> รายงานผลวิเคราะห์ความเสี่ยงการบาดเจ็บของคุณ</div>
+          <button
+  onClick={generateAIReport}
+  style={{
+    background:"#00e5ff",
+    color:"#000",
+    border:"none",
+    padding:"12px 20px",
+    borderRadius:12,
+    fontWeight:700,
+    cursor:"pointer",
+    marginTop:20,
+    marginBottom:20
+  }}
+>
+  สร้างรายงาน AI
+</button>
+{aiReport.executiveSummary && (
+
+
+<div
+  style={{
+    marginTop:20,
+    padding:24,
+    background:"#08101f",
+    borderRadius:20,
+    border:"1px solid #1e293b"
+  }}
+>
+
+<h2>RUNLAB RUNNING BIOMECHANICS REPORT</h2>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(4,1fr)",
+    gap: 16,
+    marginTop: 20,
+    marginBottom: 24,
+    padding: 16,
+    border: "1px solid #1e293b",
+    borderRadius: 12,
+    background: "#07111f"
+  }}
+>
+  <div>
+    <div style={{ color: "#64748b", fontSize: 12 }}>
+      Assessment Date
+    </div>
+    <div>{new Date().toLocaleDateString("th-TH")}</div>
+  </div>
+
+  <div>
+    <div style={{ color: "#64748b", fontSize: 12 }}>
+      Movement Score
+    </div>
+    <div>{stableScore}/100</div>
+  </div>
+
+  <div>
+    <div style={{ color: "#64748b", fontSize: 12 }}>
+      Risk Level
+    </div>
+    <div>{stableRiskLevel}</div>
+  </div>
+
+  <div>
+    <div style={{ color: "#64748b", fontSize: 12 }}>
+      Confidence
+    </div>
+    <div>{confidenceScore}%</div>
+  </div>
+</div>
+<h3>Executive Summary</h3>
+<div
+  style={{
+    background:"#07111f",
+    border:"1px solid #1e293b",
+    borderRadius:16,
+    padding:20,
+    marginTop:20
+  }}
+>
+  <div
+    style={{
+      fontSize:12,
+      color:"#64748b",
+      fontWeight:700
+    }}
+  >
+    PRIMARY RISK
+  </div>
+
+  <div
+    style={{
+      fontSize:24,
+      fontWeight:800,
+      color:"#ef4444",
+      marginTop:8
+    }}
+  >
+    {primaryRiskData.name}
+  </div>
+
+  <div
+    style={{
+      color:"#94a3b8",
+      marginTop:8
+    }}
+  >
+    {primaryRiskData.value}
+  </div>
+</div>
+<p>{aiReport.executiveSummary}</p>
+<h3>Key Findings</h3>
+
+<ul
+  style={{
+    color:"#cbd5e1",
+    lineHeight:2,
+    paddingLeft:20
+  }}
+>
+  <li>Knee Angle : {stableKneeAngle}°</li>
+  <li>Hip Drop : {stableHipDrop}°</li>
+  <li>Knee Valgus : {postureMetrics.kneeValgus}°</li>
+  <li>Pelvic Tilt : {postureMetrics.pelvicTilt}°</li>
+  <li>Overstride : {maxLockedOverstride.current}%</li>
+</ul>
+<h3>จุดที่ควรปรับปรุง</h3>
+
+<div
+  style={{
+    display:"grid",
+    gap:12,
+    marginTop:12
+  }}
+>
+  {aiReport.rootCause
+    .split(" • ")
+    .map((cause,index)=>(
+      <div
+        key={index}
+        style={{
+          background:"#07111f",
+          border:"1px solid #1e293b",
+          borderRadius:16,
+          padding:16
+        }}
+      >
+        <div
+          style={{
+            color:"#ef4444",
+            fontWeight:700
+          }}
+        >
+          ⚠️ Finding {index + 1}
+        </div>
+
+        <div
+          style={{
+            marginTop:8,
+            color:"#cbd5e1"
+          }}
+        >
+          {cause}
+        </div>
+      </div>
+    ))}
+</div>
+
+<h3>Corrective Exercise</h3>
+
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+    gap: 16,
+    marginTop: 16
+  }}
+>
+  {aiReport.recommendation
+    .split(" • ")
+    .map((exercise, index) => (
+      <div
+        key={index}
+        style={{
+          background: "#07111f",
+          border: "1px solid #1e293b",
+          borderRadius: 16,
+          padding: 20
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            color: "#64748b",
+            fontWeight: 700
+          }}
+        >
+          EXERCISE
+        </div>
+
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#00e5ff"
+          }}
+        >
+          {exercise}
+        </div>
+      </div>
+    ))}
+</div>
+<h3>Running Advice</h3>
+<h3>Recovery Timeline</h3>
+
+<div
+  style={{
+    background:"#07111f",
+    border:"1px solid #1e293b",
+    borderRadius:16,
+    padding:20,
+    marginTop:12
+  }}
+>
+  <div>Week 1-2 : ลดปริมาณการวิ่ง 20%</div>
+  <div style={{marginTop:10}}>
+    Week 3-4 : เริ่ม Strength Training
+  </div>
+  <div style={{marginTop:10}}>
+    Week 5-6 : Return To Running Progression
+  </div>
+</div>
+<div
+  style={{
+    background: "#07111f",
+    border: "1px solid #1e293b",
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 12
+  }}
+>
+  {aiReport.runningAdvice
+    .split(" • ")
+    .map((tip, index) => (
+      <div
+        key={index}
+        style={{
+          marginBottom: 10,
+          color: "#cbd5e1"
+        }}
+      >
+        ✅ {tip}
+      </div>
+    ))}
+</div>
+
+</div>
+
+)}
+<button
+  onClick={() => {
+  window.location.href = "/report";
+}}
+  style={{
+    background:"#22c55e",
+    color:"#fff",
+    border:"none",
+    padding:"12px 20px",
+    borderRadius:12,
+    fontWeight:700,
+    cursor:"pointer"
+  }}
+>
+   📄 Open Report
+</button>
           <p style={S.ss}>ตัวเลขคำนวณแบบแม่นยำร่วมกับแผนผังชีวกลศาสตร์เพื่อชี้เป้าความเสี่ยงการเกิดโรคเรื้อรัง</p>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 26 }}>
@@ -1194,7 +1970,64 @@ gap: 10,}}>
           </div>
         </div>
       </div>
+{reportData && (
 
+<div
+  style={{
+    background:"#08101f",
+    border:"1px solid #1e293b",
+    borderRadius:24,
+    padding:30,
+    marginTop:30
+  }}
+>
+
+<h2
+style={{
+color:"#00e5ff",
+marginBottom:20
+}}
+>
+RUNLAB AI REPORT
+</h2>
+
+<div
+style={{
+display:"grid",
+gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
+gap:20
+}}
+>
+
+<Stat
+label="RUNLAB SCORE"
+val={reportData.summary.score}
+color="#00e5ff"
+/>
+
+<Stat
+label="RISK LEVEL"
+val={reportData.summary.riskLevel}
+color="#f59e0b"
+/>
+
+<Stat
+label="OFFICE RISK"
+val={`${reportData.officeSyndrome.risk}%`}
+color="#ef4444"
+/>
+
+<Stat
+label="KNEE ANGLE"
+val={`${reportData.dynamicAnalysis.kneeAngle}°`}
+color="#3b82f6"
+/>
+
+</div>
+
+</div>
+
+)}
       {/* STEP 4: RECOVERY PROGRAMS */}
      <div id="recovery-programs" style={{ padding: "50px 0" }}>
   <div style={S.wrap}>
