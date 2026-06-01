@@ -109,6 +109,49 @@ const getPostureRisk = (headAngle: number) => {
   if (headAngle > 10) return { level: 'Medium', color: 'orange', msg: 'ควรปรับท่านั่ง' };
   return { level: 'Low', color: 'green', msg: 'ท่าทางปกติ' };
 };
+const calculateOfficeRisk = (
+  forwardHead: number,
+  shoulderTilt: number,
+  pelvicTilt: number
+) => {
+  const headScore =
+    forwardHead > 30
+      ? 100
+      : forwardHead > 20
+      ? 75
+      : forwardHead > 10
+      ? 50
+      : 10;
+
+  const shoulderScore =
+    shoulderTilt > 10
+      ? 100
+      : shoulderTilt > 5
+      ? 60
+      : 20;
+
+  const pelvicScore =
+    pelvicTilt > 10
+      ? 100
+      : pelvicTilt > 5
+      ? 60
+      : 20;
+
+  const risk = Math.round(
+    headScore * 0.5 +
+    shoulderScore * 0.3 +
+    pelvicScore * 0.2
+  );
+
+  const level =
+    risk >= 70
+      ? "HIGH"
+      : risk >= 40
+      ? "MEDIUM"
+      : "LOW";
+
+  return { risk, level };
+};
 const POSE_CONNECTIONS = [
   [11, 13], [13, 15], [12, 14], [14, 16],
   [11, 12], [11, 23], [12, 24], [23, 24],
@@ -900,13 +943,27 @@ if (backLandmarks) {
 }
    
 setPostureMetrics({
-  shoulderTilt: 4,
-  pelvicTilt: 5,
-  kneeValgus: 6,
-  footRotation: 3,
-  forwardHead: 12,
+  shoulderTilt,
+  pelvicTilt,
+  kneeValgus,
+  footRotation,
+  forwardHead,
 });
 
+const officeResult =
+  calculateOfficeRisk(
+  forwardHead,
+  shoulderTilt,
+  pelvicTilt
+)
+
+setOfficeRisk(
+  officeResult.risk
+);
+
+setOfficeLevel(
+  officeResult.level
+);
 setPostureAnalyzed(true);
 
 console.log({
