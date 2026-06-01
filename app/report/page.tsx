@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 export default function ReportPage() {
 const [report, setReport] = useState<any>(null);
@@ -17,7 +19,10 @@ const downloadReport = async () => {
   const reportElement =
     document.getElementById("report-export");
 
-  if (!reportElement) return;
+  if (!reportElement) {
+    alert("Report not found");
+    return;
+  }
 
   const html2canvas =
     (await import("html2canvas")).default;
@@ -27,18 +32,19 @@ const downloadReport = async () => {
 
   const canvas =
     await html2canvas(reportElement, {
-      scale: 2,
+      scale: 1,
+      useCORS: true,
       backgroundColor: "#050b14",
     });
 
   const imgData =
     canvas.toDataURL("image/png");
 
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-  });
+  const pdf = new jsPDF(
+    "p",
+    "mm",
+    "a4"
+  );
 
   const pdfWidth =
     pdf.internal.pageSize.getWidth();
@@ -56,8 +62,22 @@ const downloadReport = async () => {
     pdfHeight
   );
 
-  pdf.save("RunLab-Report.pdf");
+const blob = pdf.output("blob");
+
+const url = URL.createObjectURL(blob);
+
+const a = document.createElement("a");
+a.href = url;
+a.download = "RUNLAB_REPORT.pdf";
+
+document.body.appendChild(a);
+a.click();
+
+document.body.removeChild(a);
+
+URL.revokeObjectURL(url);
 };
+
 if (!report) {
 return (
 <div
