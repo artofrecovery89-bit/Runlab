@@ -14,4 +14,4 @@ export const theme = {
     md: "16px",
     lg: "24px",
   },
-};ls src/components/ui
+};

@@ -349,10 +349,10 @@ RUNLAB AI </h1>
       }}
     >
       <strong>
-        Lab Exercise Rehabilitation Center
+        แนะนำให้ปรึกษาโค้ชวิ่งหรือผู้เชี่ยวชาญด้านการเคลื่อนไหวเพื่อการวินิจฉัยที่แม่นยำและแผนการแก้ไขที่เหมาะสม
       </strong>
       <br />
-      Coach Art
+      ติดต่อโค้ชอาร์ทเพื่อรับคำปรึกษาและแผนการฝึกซ้อมที่เหมาะสมกับคุณ
       <br />
       Running Injury & Performance Specialist
     </div>
