@@ -1,9 +1,15 @@
 "use client";
 
-// import PdfReport from "./components/PdfReport";
-
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import {
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+  useUser,
+} from "@clerk/nextjs";
 
 const SCRIPTS = [
   "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js",
@@ -721,8 +727,12 @@ function InteractiveAnatomy({ risks }: { risks: { runnersKnee: number; achilles:
 export default function RunLabPremiumSystem() {
 
   const [isMobile, setIsMobile] = useState(false);
+  const { user, isLoaded } = useUser();
 
+console.log("LOADED =", isLoaded);
+console.log("USER =", user);
   useEffect(() => {
+    console.log("USER =", user);
 
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -831,6 +841,7 @@ export default function RunLabPremiumSystem() {
       if (poseRef.current) { try { poseRef.current.close(); } catch (_) { } }
     };
   }, []);
+
   const analyzeImage = async (imageSrc: string) => {
 
     await ensureScripts();
@@ -1093,22 +1104,25 @@ console.log("POSTURE", {
         setStableKneeAngle(finalKneeAngle);
         setStableHipDrop(Math.round(finalPelvicDrop));
 
-        setSubMetrics({
-          eff: Math.round(coreScore),
-          hip: Math.round(Math.max(30, 100 - (finalPelvicDrop * 8) - postureMetrics.pelvicTilt)),
-          knee: Math.round(Math.max(30, 100 - (kneeDiff * 2) - postureMetrics.kneeValgus)),
-          mob: Math.round(Math.min(100, Math.max(45, 100 - (calcAchillesRisk * 0.3)))),
-          bal: Math.round(Math.max(40, 100 - (finalPelvicDrop * 5) - postureMetrics.shoulderTilt))
-        });
-        const overallScore = Math.round(
-          (
-            subMetrics.eff +
-            subMetrics.hip +
-            subMetrics.knee +
-            subMetrics.mob +
-            subMetrics.bal
-          ) / 5
-        );
+      const newSubMetrics = {
+  eff: Math.round(coreScore),
+  hip: Math.round(Math.max(30, 100 - (finalPelvicDrop * 8) - postureMetrics.pelvicTilt)),
+  knee: Math.round(Math.max(30, 100 - (kneeDiff * 2) - postureMetrics.kneeValgus)),
+  mob: Math.round(Math.min(100, Math.max(45, 100 - (calcAchillesRisk * 0.3)))),
+  bal: Math.round(Math.max(40, 100 - (finalPelvicDrop * 5) - postureMetrics.shoulderTilt))
+};
+
+setSubMetrics(newSubMetrics);
+
+const overallScore = Math.round(
+(
+  newSubMetrics.eff +
+  newSubMetrics.hip +
+  newSubMetrics.knee +
+  newSubMetrics.mob +
+  newSubMetrics.bal
+) / 5
+);
 
         setStableScore(overallScore);
         const sortedRisks = Object.entries(computedRisks).sort((a, b) => b[1] - a[1]);
@@ -1161,7 +1175,7 @@ console.log("POSTURE", {
 
     if (video.readyState >= 2) onLoaded();
     else video.onloadeddata = onLoaded;
-  }, [postureMetrics]);
+  }, []);
 
   useEffect(() => { if (videoURL) startPose(); }, [videoURL, startPose]);
   useEffect(() => {
@@ -1169,7 +1183,6 @@ console.log("POSTURE", {
     generateReport();
 
   }, [
-    postureMetrics,
     injuryRisks,
     stableScore,
     stableRiskLevel,
@@ -1281,7 +1294,7 @@ console.log("POSTURE", {
   };
 
   // 👇 วางตรงนี้
-  const generateAIReport = () => {
+  const generateAIReport = async () => {
     captureFrame();
 
     const rootCauses: string[] = [];
@@ -1354,10 +1367,7 @@ console.log("POSTURE", {
       advice,
     };
 
-    localStorage.setItem(
-      "runlab-report",
-      JSON.stringify(finalReport)
-    );
+    
     console.log("REPORT SAVED");
     console.log(finalReport);
     const executiveSummary = `
@@ -1380,6 +1390,30 @@ ${rootCauses.join(", ")}
       recommendation: [...new Set(exercises)].join(" • "),
       runningAdvice: advice.join(" • "),
     });
+    const reportData = {
+  executiveSummary,
+  rootCause: rootCauses.join(" • "),
+  recommendation: [...new Set(exercises)].join(" • "),
+  runningAdvice: advice.join(" • "),
+};
+if (!user) {
+  alert("กรุณา Login ก่อน");
+  return;
+}
+console.log("USER ID =", user?.id);
+console.log("REPORT =", reportData);
+
+
+await supabase
+  .from("reports")
+  .insert({
+    user_id: user?.id,
+    score: stableScore,
+    risk_level: stableRiskLevel,
+    diagnosis: primaryRisk.name,
+    report_json: reportData,
+    is_paid: false,
+  });
 
   };
 
@@ -1503,12 +1537,8 @@ ${rootCauses.join(", ")}
           My Courses
         </a>
 
-        <a href="/academy">Academy</a>
 
-        <button style={S.bp}>
-          Login
-        </button>
-
+     <div>Clerk Test</div>
       </div>
 
 
@@ -1546,7 +1576,22 @@ ${rootCauses.join(", ")}
           </div>
           <div style={{ display: "flex", gap: 28, fontSize: 14, fontWeight: 600, color: "#64748b" }}>
             <span style={{ color: "#00e5ff", cursor: "pointer" }}>หน้าแรก</span>
-
+<a
+  href="/dashboard"
+  style={{
+    color: "#00e5ff",
+    textDecoration: "none",
+    fontWeight: 700,
+    fontSize: 14,
+    padding: "8px 14px",
+    borderRadius: 999,
+    background: "rgba(0,229,255,0.08)",
+    border: "1px solid rgba(0,229,255,0.2)",
+  }}
+>
+  📊 Dashboard
+</a>
+        
             <div
 
               style={{
@@ -1572,21 +1617,13 @@ ${rootCauses.join(", ")}
                 📚 Academy
               </a>
 
-
-              <button
-                style={{
-                  background: "#00e5ff",
-                  color: "#001018",
-                  border: "none",
-                  borderRadius: 999,
-                  padding: "8px 18px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  boxShadow: "0 0 20px rgba(0,229,255,.3)",
-                }}
-              >
-                Login
-              </button>
+{!user ? (
+  <SignInButton mode="modal">
+    <button style={S.bp}>Login</button>
+  </SignInButton>
+) : (
+  <UserButton />
+)}
 
             </div> {/* ปิด div display:flex gap14 */}
 
