@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -122,9 +123,12 @@ export default function ReportPage() {
     );
   }
 
-  const data =
-    report.report_json || {};
-
+const data = report.report_json || {};
+const risks =
+  data.injuryRisks || {};
+const office =
+  data.officeSyndrome || {};
+  
   return (
     <div
       id="report-export"
@@ -137,10 +141,36 @@ export default function ReportPage() {
         margin: "0 auto",
       }}
     >
+   <div
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 40,
+    borderBottom: "1px solid #1e293b",
+    paddingBottom: 30,
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 20,
+    }}
+  >
+       <img
+  src="/duha-icon.png"
+  width={120}
+  height={120}
+/>
+
+    <div>
       <h1
         style={{
-          fontSize: 56,
-          fontWeight: 800,
+          fontSize: 40,
+          fontWeight: 900,
+          margin: 0,
+          color: "#fff",
         }}
       >
         RUNLAB AI
@@ -148,12 +178,55 @@ export default function ReportPage() {
 
       <p
         style={{
-          color: "#94a3b8",
-          fontSize: 20,
+          color: "#00E5FF",
+          fontSize: 14,
+          letterSpacing: 2,
+          marginTop: 8,
+          fontWeight: 700,
         }}
       >
-        Clinical Movement Report
+        POWERED BY DUHA TECHNOLOGIES
       </p>
+
+      <p
+        style={{
+          color: "#94A3B8",
+          marginTop: 10,
+          fontSize: 16,
+        }}
+      >
+        Clinical Running Assessment Report
+      </p>
+    </div>
+  </div>
+
+  <div
+    style={{
+      textAlign: "right",
+      color: "#CBD5E1",
+      fontSize: 14,
+      lineHeight: 1.8,
+    }}
+  >
+    <div>
+      <strong>Report ID</strong>
+      <br />
+      {report.id}
+    </div>
+
+    <div style={{ marginTop: 10 }}>
+      <strong>Date</strong>
+      <br />
+      {new Date(report.created_at).toLocaleDateString()}
+    </div>
+
+    <div style={{ marginTop: 10 }}>
+      <strong>Examiner</strong>
+      <br />
+      Coach Art
+    </div>
+  </div>
+</div>
 
       <button
         onClick={downloadReport}
@@ -179,35 +252,72 @@ export default function ReportPage() {
           gap: 16,
         }}
       >
-        <Card
-          title="MOVEMENT SCORE"
-          value={report.score}
-        />
+        <ScoreCard
+  title="MOVEMENT SCORE"
+  value={report.score}
+  color="#00e5ff"
+/>
 
-        <Card
-          title="RISK LEVEL"
-          value={report.risk_level}
-        />
+<ScoreCard
+  title="RISK LEVEL"
+  value={report.risk_level}
+  color="#ef4444"
+/>
 
-        <Card
-          title="DIAGNOSIS"
-          value={report.diagnosis}
-        />
+<ScoreCard
+  title="OFFICE RISK"
+  value={`${office.risk || 0}%`}
+  color="#facc15"
+/>
 
-        <Card
-          title="OFFICE RISK"
-          value={
-            data.officeLevel || "-"
-          }
-        />
+<ScoreCard
+  title="DIAGNOSIS"
+  value={report.diagnosis}
+/>
       </div>
+<div
+  style={{
+    marginTop: 30,
+    background: "#07111f",
+    padding: 30,
+    borderRadius: 20,
+    border: "1px solid #1e293b",
+  }}
+>
+  <h2>Injury Risk Assessment</h2>
 
-      <Section
-        title="Executive Summary"
-      >
-        {data.executiveSummary ||
-          "No Data"}
-      </Section>
+  <RiskBar
+  label="Runner's Knee"
+  value={risks.runnersKnee || 0}
+/>
+
+<RiskBar
+  label="IT Band Syndrome"
+  value={risks.itBand || 0}
+/>
+
+<RiskBar
+  label="Achilles Tendon"
+  value={risks.achilles || 0}
+/>
+
+<RiskBar
+  label="Shin Splints"
+  value={risks.shinSplints || 0}
+/>
+</div>
+
+      <Section title="Executive Summary">
+  <div
+    style={{
+      whiteSpace: "pre-line",
+      lineHeight: 1.8,
+      fontSize: 16,
+    }}
+  >
+    {data.executiveSummary || "No Data"}
+  </div>
+</Section>
 
       <Section title="Root Cause">
         {data.rootCause ||
@@ -231,13 +341,56 @@ export default function ReportPage() {
           "No Data"}
       </Section>
 
-      <Section
-        title="Office Syndrome"
-      >
-        Risk : {data.officeRisk}
-        <br />
-        Level : {data.officeLevel}
-      </Section>
+     <Section title="Office Syndrome Analysis">
+
+  <div>
+    <strong>Risk Score:</strong>{" "}
+    {data.officeRisk || 0}%
+  </div>
+
+  <div>
+    <strong>Level:</strong>{" "}
+    {data.officeLevel || "LOW"}
+  </div>
+
+  <div style={{ marginTop: 10 }}>
+    วิเคราะห์จาก
+
+    <ul>
+      <li>Forward Head Posture</li>
+      <li>Shoulder Tilt</li>
+      <li>Pelvic Tilt</li>
+    </ul>
+  </div>
+
+</Section>
+<Section title="Running Analysis">
+  <div style={{ lineHeight: 2 }}>
+    <div>
+      Knee Flexion :
+      {data.kneeAngle
+        ? `${Number(data.kneeAngle).toFixed(1)}°`
+        : "-"}
+    </div>
+
+
+
+
+    <div>
+      Overstride :
+      {data.overstride
+        ? `${data.overstride}`
+        : "-"}
+    </div>
+
+    <div>
+      Cadence :
+      {data.cadence
+        ? `${data.cadence}`
+        : "-"}
+    </div>
+  </div>
+</Section>
 
       <div
         style={{
@@ -266,6 +419,36 @@ export default function ReportPage() {
           และโปรแกรมฟื้นฟูเฉพาะบุคคล
         </p>
       </div>
+      <footer
+  style={{
+    marginTop: 80,
+    paddingTop: 30,
+    borderTop: "1px solid #1e293b",
+    color: "#64748b",
+    textAlign: "center",
+  }}
+>
+  <h3
+    style={{
+      color: "#fff",
+    }}
+  >
+    Lab Exercise Rehabilitation Center
+  </h3>
+
+  <p>
+    Running Injury &
+    Performance Specialist
+  </p>
+
+  <p>
+    Coach Art
+  </p>
+
+  <p>
+    © RUNLAB AI 2026
+  </p>
+</footer>
     </div>
   );
 }
@@ -327,6 +510,97 @@ function Section({
     >
       <h2>{title}</h2>
       <div>{children}</div>
+    </div>
+  );
+}
+function ScoreCard({
+  title,
+  value,
+  color = "#fff",
+}: {
+  title: string;
+  value: any;
+  color?: string;
+}) {
+  return (
+    <div
+      style={{
+        background: "#07111f",
+        borderRadius: 20,
+        padding: 24,
+        border: "1px solid #1e293b",
+      }}
+    >
+      <div
+        style={{
+          color: "#94a3b8",
+          fontSize: 12,
+        }}
+      >
+        {title}
+      </div>
+
+      <div
+        style={{
+          marginTop: 10,
+          fontSize: 32,
+          fontWeight: 800,
+          color,
+        }}
+      >
+        {value}
+      </div>
+      
+    </div>
+  );
+}
+function RiskBar({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  const color =
+    value > 70
+      ? "#EF4444"
+      : value > 40
+      ? "#F59E0B"
+      : "#22C55E";
+
+  return (
+    <div
+      style={{
+        marginBottom: 20,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 8,
+        }}
+      >
+        <span>{label}</span>
+        <strong>{value}%</strong>
+      </div>
+
+      <div
+        style={{
+          height: 12,
+          background: "#1E293B",
+          borderRadius: 999,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: `${value}%`,
+            height: "100%",
+            background: color,
+          }}
+        />
+      </div>
     </div>
   );
 }

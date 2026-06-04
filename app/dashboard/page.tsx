@@ -5,88 +5,216 @@ import { supabase } from "@/lib/supabase";
 import { useUser } from "@clerk/nextjs";
 
 export default function Dashboard() {
-  const { user } = useUser();
-
   const [reports, setReports] = useState<any[]>([]);
 
-  useEffect(() => {
-  if (user) {
-    loadReports();
-  }
+  const { user, isLoaded } = useUser();
+useEffect(() => {
+  console.log("CLERK USER =", user);
+  console.log("CLERK USER ID =", user?.id);
 }, [user]);
+  useEffect(() => {
+    console.log("IS LOADED =", isLoaded);
+    console.log("USER =", user);
+    console.log("USER ID =", user?.id);
+  }, [user, isLoaded]);
+
+useEffect(() => {
+    if (isLoaded && user) {
+      loadReports();
+    }
+  }, [isLoaded, user]);
 
 const loadReports = async () => {
   if (!user) return;
 
+  console.log("SEARCH USER =", user.id);
+
   const { data, error } = await supabase
     .from("reports")
     .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", {
-      ascending: false,
-    });
+    .eq("user_id", user.id);
 
-  console.log(data);
-  console.log(error);
+  console.log("REPORT DATA =", data);
+  console.log("REPORT ERROR =", error);
 
   setReports(data || []);
 };
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1>My Reports</h1>
-{reports.length === 0 && (
-  <div
-    style={{
-      padding: 30,
-      border: "1px dashed #444",
-      borderRadius: 12,
-      marginTop: 20,
-    }}
-  >
-    ยังไม่มีรายงานการวิเคราะห์
-  </div>
-)}
+    <div
+  style={{
+    padding: 40,
+    background: "#050B14",
+    minHeight: "100vh",
+    color: "#fff",
+  }}
+>
+      <h1
+  style={{
+    fontSize: 42,
+    fontWeight: 800,
+    marginBottom: 30,
+    color: "#FFFFFF",
+  }}
+>
+  RUNLAB COMMAND CENTER
+</h1>
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit,minmax(220px,1fr))",
+    gap: 20,
+    marginBottom: 40,
+  }}
+>
+  <StatCard
+    title="TOTAL REPORTS"
+    value={reports.length}
+  />
+
+  <StatCard
+    title="AVERAGE SCORE"
+    value={
+      reports.length
+        ? Math.round(
+            reports.reduce(
+              (sum, r) => sum + r.score,
+              0
+            ) / reports.length
+          )
+        : 0
+    }
+  />
+
+  <StatCard
+    title="HIGH RISK"
+    value={
+      reports.filter(
+        (r) => r.risk_level === "HIGH"
+      ).length
+    }
+  />
+
+  <StatCard
+    title="OFFICE CASES"
+    value={
+      reports.filter(
+        (r) =>
+          r.report_json?.officeLevel ===
+          "HIGH"
+      ).length
+    }
+  />
+</div>
+
      {reports.map((report) => (
   <div
     key={report.id}
     style={{
-      padding: 20,
-      border: "1px solid #333",
-      marginBottom: 10,
-      borderRadius: 12,
+      background: "#0B1728",
+      border: "1px solid #22304A",
+      marginBottom: 16,
+      borderRadius: 16,
+      padding: 24,
+      boxShadow:
+        "0 0 20px rgba(0,229,255,0.08)",
     }}
   >
-    <h3>{report.diagnosis}</h3>
+  
+<h3
+  style={{
+    color:"#FFFFFF",
+    fontSize:24,
+    marginBottom:12,
+  }}
+>
+  {report.diagnosis}
+</h3>
+<div
+  style={{
+    display: "flex",
+    gap: 20,
+    marginBottom: 12,
+    flexWrap: "wrap",
+  }}
+>
+  <span>
+    🎯 Score: {report.score}
+  </span>
 
-    <p>Score : {report.score}</p>
+  <span>
+    ⚠️ Risk: {report.risk_level}
+  </span>
 
-    <p>Risk : {report.risk_level}</p>
+  <span>
+    📅{" "}
+    {new Date(
+      report.created_at
+    ).toLocaleDateString()}
+  </span>
+</div>
 
-    <p>
-      Date :
-      {new Date(
-        report.created_at
-      ).toLocaleDateString()}
-    </p>
+       
 
-    <a
-      href={`/report/${report.id}`}
+          <a
+            href={`/report/${report.id}`}
+            style={{
+              display: "inline-block",
+              marginTop: 10,
+              padding: "8px 14px",
+             background:
+  "linear-gradient(135deg,#00E5FF,#009DFF)",
+  boxShadow:
+  "0 0 20px rgba(0,229,255,0.25)",
+              color: "#000",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontWeight: 700,
+            }}
+          >
+            ดูรายงาน
+          </a>
+        </div>
+      ))}
+    </div>
+  );
+}
+function StatCard({
+  title,
+  value,
+}: {
+  title: string;
+  value: any;
+}) {
+  return (
+    <div
       style={{
-        display: "inline-block",
-        marginTop: 10,
-        padding: "8px 14px",
-        background: "#00e5ff",
-        color: "#000",
-        borderRadius: 8,
-        textDecoration: "none",
-        fontWeight: 700,
+        background: "#07111F",
+        padding: 24,
+        borderRadius: 16,
+        border: "1px solid #1E293B",
       }}
     >
-            ดูรายงาน
-        </a>
+      <div
+        style={{
+          color: "#94A3B8",
+          fontSize: 12,
+        }}
+      >
+        {title}
       </div>
-    ))}
-  </div>
-);
+
+      <div
+        style={{
+          fontSize: 36,
+          fontWeight: 800,
+          color: "#00E5FF",
+          marginTop: 10,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
 }

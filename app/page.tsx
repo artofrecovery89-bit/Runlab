@@ -729,6 +729,7 @@ export default function RunLabPremiumSystem() {
   const [isMobile, setIsMobile] = useState(false);
   const { user, isLoaded } = useUser();
 
+  
 console.log("LOADED =", isLoaded);
 console.log("USER =", user);
   useEffect(() => {
@@ -1370,18 +1371,22 @@ const overallScore = Math.round(
     
     console.log("REPORT SAVED");
     console.log(finalReport);
-    const executiveSummary = `
-จากการวิเคราะห์การเคลื่อนไหว พบว่าคุณมี Movement Score ${stableScore}/100
+ const executiveSummary = `
+Movement Score : ${stableScore}/100
 
-ความเสี่ยงหลักคือ ${primaryRisk.name}
-(${primaryRisk.value}%)
+ความเสี่ยงหลัก :
+${primaryRisk.name} (${primaryRisk.value}%)
 
-ปัจจัยสำคัญที่ตรวจพบ ได้แก่
+ปัจจัยสำคัญที่ตรวจพบ :
+• ${rootCauses.join("\n• ")}
 
-${rootCauses.join(", ")}
+คำแนะนำเบื้องต้น :
+• ${[...new Set(exercises)].join("\n• ")}
 
+สรุป :
 แนะนำให้ปรับรูปแบบการเคลื่อนไหวและเสริมสร้างความแข็งแรงเฉพาะจุดเพื่อลดความเสี่ยงการบาดเจ็บในอนาคต
-`;
+`; 
+
     setConfidenceScore(confidence);
 
     setAiReport({
@@ -1390,12 +1395,67 @@ ${rootCauses.join(", ")}
       recommendation: [...new Set(exercises)].join(" • "),
       runningAdvice: advice.join(" • "),
     });
+ const analysisSummary = `
+Movement Score ${stableScore}/100
+
+Primary Risk: ${primaryRisk.name}
+
+Office Syndrome Risk: ${officeLevel}
+
+Hip Drop: ${stableHipDrop}
+
+Knee Valgus: ${postureMetrics.kneeValgus}
+
+Forward Head: ${postureMetrics.forwardHead}
+`;
     const reportData = {
   executiveSummary,
-  rootCause: rootCauses.join(" • "),
-  recommendation: [...new Set(exercises)].join(" • "),
-  runningAdvice: advice.join(" • "),
+  injuryRisks,
+  analysisSummary,
+
+
+  rootCause: rootCauses,
+
+  recommendation: [...new Set(exercises)],
+
+  runningAdvice: advice,
+
+  officeRisk,
+
+  officeLevel,
+
+  movementScore: stableScore,
+
+  diagnosis,
+
+  riskLevel: stableRiskLevel,
+
+  kneeAngle: stableKneeAngle,
+
+  hipDrop: stableHipDrop,
+  overstride: maxLockedOverstride.current,
+
+cadence:
+  maxLockedOverstride.current > 10
+    ? "Low"
+    : "Normal",
+
+  kneeValgus: postureMetrics.kneeValgus,
+
+  pelvicTilt: postureMetrics.pelvicTilt,
+
+  forwardHead: postureMetrics.forwardHead,
+
+  shoulderTilt: postureMetrics.shoulderTilt,
+
+  footRotation: postureMetrics.footRotation,
+
+  createdAt: new Date().toISOString(),
 };
+console.log(
+  "REPORT DATA",
+  reportData
+);
 if (!user) {
   alert("กรุณา Login ก่อน");
   return;
@@ -1483,7 +1543,16 @@ await supabase
       margin: "0 auto",
       padding: "0 20px",
     },
-
+navBtn: {
+  color: "#00E5FF",
+  textDecoration: "none",
+  fontWeight: 700,
+  fontSize: 14,
+  padding: "10px 16px",
+  borderRadius: 999,
+  background: "rgba(0,229,255,0.08)",
+  border: "1px solid rgba(0,229,255,0.15)",
+},
     sn: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, background: "linear-gradient(135deg, #00e5ff 0%, #0066ff 100%)", color: "#030712", borderRadius: 10, fontWeight: 900, fontSize: 14, marginRight: 12, boxShadow: "0 4px 14px rgba(0,229,255,0.3)" },
     st: {
       fontSize: isMobile ? 16 : 22,
@@ -1526,16 +1595,7 @@ await supabase
         justifyContent: "space-between",
         gap: 10,
       }}>
-        <a
-          href="/academy"
-          style={{
-            color: "#00e5ff",
-            textDecoration: "none",
-            fontWeight: 700,
-          }}
-        >
-          My Courses
-        </a>
+       
 
 
      <div>Clerk Test</div>
@@ -1544,94 +1604,84 @@ await supabase
 
       <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {/* HEADER NAVIGATION */}
-      <nav style={S.nav}>
-        <div style={S.navIn}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#00e5ff", boxShadow: "0 0 12px #00e5ff" }} />
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div
-                style={{
-                  fontWeight: 900,
-                  fontSize: 22,
-                  color: "#fff",
-                  letterSpacing: 0.5,
-                }}
-              >
-                RUNLAB
-              </div>
+<nav style={S.nav}>
+  <div
+    style={{
+      ...S.navIn,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+    }}
+  >
 
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "#64748b",
-                  letterSpacing: 1.5,
-                  fontWeight: 700,
-                  marginTop: -2,
-                }}
-              >
-                BY DUHA TECHNOLOGY
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 28, fontSize: 14, fontWeight: 600, color: "#64748b" }}>
-            <span style={{ color: "#00e5ff", cursor: "pointer" }}>หน้าแรก</span>
-<a
-  href="/dashboard"
-  style={{
-    color: "#00e5ff",
-    textDecoration: "none",
-    fontWeight: 700,
-    fontSize: 14,
-    padding: "8px 14px",
-    borderRadius: 999,
-    background: "rgba(0,229,255,0.08)",
-    border: "1px solid rgba(0,229,255,0.2)",
-  }}
->
-  📊 Dashboard
-</a>
-        
-            <div
+    {/* LEFT */}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <img
+  src="/duha-icon.png"
+  width="60"
+/>
 
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-              }}
-            >
-              <a
-                href="/academy"
-                style={{
-                  color: "#00e5ff",
-                  textDecoration: "none",
-                  fontWeight: 700,
-                  fontSize: 14,
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  background: "rgba(0,229,255,0.08)",
-                  border: "1px solid rgba(0,229,255,0.2)",
-                  transition: "all .2s ease",
-                }}
-              >
-                📚 Academy
-              </a>
+      <div>
+        <div
+          style={{
+            fontWeight: 900,
+            fontSize: 22,
+            color: "#fff",
+          }}
+        >
+          RUNLAB AI
+        </div>
 
-{!user ? (
-  <SignInButton mode="modal">
-    <button style={S.bp}>Login</button>
-  </SignInButton>
-) : (
-  <UserButton />
-)}
+        <div
+          style={{
+            fontSize: 10,
+            color: "#00E5FF",
+            letterSpacing: 2,
+            fontWeight: 700,
+          }}
+        >
+          POWERED BY DUHA
+        </div>
+      </div>
+    </div>
 
-            </div> {/* ปิด div display:flex gap14 */}
+    {/* CENTER */}
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+      }}
+    >
+      <a href="/dashboard" style={S.navBtn}>
+        📊 Dashboard
+      </a>
+    </div>
 
-          </div> {/* ปิด div nav menu */}
+    {/* RIGHT */}
+    <div>
+      {!user ? (
+        <SignInButton mode="modal">
+          <button style={S.bp}>
+            Login
+          </button>
+        </SignInButton>
+      ) : (
+        <UserButton />
+      )}
+    </div>
 
-        </div> {/* ปิด S.navIn */}
+  </div>
+</nav>
+          
+         
 
-      </nav>
+     
 
       {/* HERO SECTION */}
       <div style={{
@@ -2121,7 +2171,7 @@ await supabase
           )}
           <button
             onClick={() => {
-              window.location.href = "/report";
+                  window.location.href = "/dashboard";
             }}
             style={{
               background: "#22c55e",
@@ -2149,17 +2199,63 @@ await supabase
           </div>
 
           {/* TWO-COLUMN LAYOUT: SKELETON MODEL VS RISK CARDS */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24, marginBottom: 30, alignItems: "stretch" }}>
-            {/* Interactive Anatomy Component */}
-            <InteractiveAnatomy risks={injuryRisks} />
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 24,
+    marginBottom: 30,
+    alignItems: "stretch",
+  }}
+>
+  {/* LEFT */}
 
-            {/* Risk Breakdown Stack */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <RiskCard title="Runner's Knee (สะบ้าอักเสบ)" pct={injuryRisks.runnersKnee} desc="ประเมินผิวข้อสะบ้าจากมุมเหยียดเข่า ร่วมกับภาวะเข่าบิดล้มเข้าด้านใน" />
-              <RiskCard title="Achilles Tendonitis (เอ็นร้อยหวาย)" pct={injuryRisks.achilles} desc="คำนวณแรงเค้นสะสมจากระยะก้าวยาวเกินจุดศูนย์ถ่วงลำตัว (Overstride)" />
-              <RiskCard title="IT Band Syndrome (เจ็บข้างเข่า)" pct={injuryRisks.itBand} desc="วัดมุมบิดเค้นเนื้อเยื่อข้างขาจากการทรุดตัวของกระดูกเชิงกรานและสะโพก" />
-              <RiskCard title="Shin Splints (เจ็บหน้าแข้ง)" pct={injuryRisks.shinSplints} desc="ประเมินแรงกระแทกแนวกระดูกหน้าแข้งจากการลงส้นเท้าล้ำแนวสะโพกเกินเกณฑ์" />
-            </div>
+  <div
+    style={{
+      height: "100%",
+      minHeight: 720,
+    }}
+  >
+    <InteractiveAnatomy
+      risks={injuryRisks}
+    />
+  </div>
+
+  {/* RIGHT */}
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 16,
+      minHeight: 720,
+    }}
+  >
+    <RiskCard
+      title="Runner's Knee (สะบ้าอักเสบ)"
+      pct={injuryRisks.runnersKnee}
+      desc="ประเมินผิวข้อสะบ้าจากมุมเหยียดเข่า ร่วมกับภาวะเข่าบิดล้มเข้าด้านใน"
+    />
+
+    <RiskCard
+      title="Achilles Tendonitis (เอ็นร้อยหวาย)"
+      pct={injuryRisks.achilles}
+      desc="คำนวณแรงเค้นสะสมจากระยะก้าวยาวเกินจุดศูนย์ถ่วงลำตัว (Overstride)"
+    />
+
+    <RiskCard
+      title="IT Band Syndrome (เจ็บข้างเข่า)"
+      pct={injuryRisks.itBand}
+      desc="วัดมุมบิดเค้นเนื้อเยื่อข้างขาจากการทรุดตัวของกระดูกเชิงกรานและสะโพก"
+    />
+
+    <RiskCard
+      title="Shin Splints (เจ็บหน้าแข้ง)"
+      pct={injuryRisks.shinSplints}
+      desc="ประเมินแรงกระแทกแนวกระดูกหน้าแข้งจากการลงส้นเท้าล้ำแนวสะโพกเกินเกณฑ์"
+    />
+  </div>
+</div>
   {/* OFFICE SYNDROME SECTION */}
 
 <div
@@ -2284,7 +2380,7 @@ await supabase
                 {recommendation || "แนวทางฝึกความแข็งแรงกล้ามเนื้อและปรับฟอร์มการวิ่งที่ถูกต้องเพื่อลดการบาดเจ็บ"}
               </div>
       </div>
-      </div> {/* END TWO-COLUMN LAYOUT */}
+      
           <div id="recovery-programs" style={{ padding: "50px 0" }}>
   <div style={S.wrap}>
 
