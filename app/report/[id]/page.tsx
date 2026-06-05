@@ -543,34 +543,20 @@ const handlePayment = async () => {
 </Section>
   </>
 )}
-      <div
-        style={{
-          marginTop: 40,
-          padding: 24,
-          background: "#07111f",
-          borderRadius: 16,
-          border:
-            "1px solid #1e293b",
-        }}
-      >
-        <h3>
-          👨‍⚕️ Recommended Next
-          Step
-        </h3>
 
-        <p>
-          ผลวิเคราะห์นี้เป็นการคัดกรองเบื้องต้นด้วย AI
-          เพื่อช่วยระบุความเสี่ยงของการบาดเจ็บ
-          และความผิดปกติของการเคลื่อนไหว
-        </p>
+     <div
+  style={{
+    marginTop: 40,
+    padding: 24,
+    background: "#07111f",
+    borderRadius: 16,
+    border: "1px solid #1e293b",
+  }}
+>
+  <PersonalizedPrograms report={report} />
+</div>
 
-        <p>
-          ติดต่อ Coach Art เพื่อรับ
-          Running Assessment
-          และโปรแกรมฟื้นฟูเฉพาะบุคคล
-        </p>
-      </div>
-      <footer
+<footer
   style={{
     marginTop: 80,
     paddingTop: 30,
@@ -753,5 +739,84 @@ function RiskBar({
         />
       </div>
     </div>
+  );
+}
+function PersonalizedPrograms({
+  report,
+}: {
+  report: any;
+}) {
+  return (
+    <>
+      <div
+        style={{
+          marginTop: 30,
+          background: "#07111f",
+          borderRadius: 16,
+          padding: 24,
+          border: "1px solid #1e293b",
+        }}
+      >
+        <h2>โปรแกรมฟื้นฟูเฉพาะบุคคล</h2>
+
+        <div style={{ marginTop: 20 }}>
+          PRO-KNEE
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 30,
+          padding: 30,
+          background: "#07111f",
+          borderRadius: 20,
+          border: "1px solid #1e293b",
+          textAlign: "center",
+        }}
+      >
+        <h2
+          style={{
+            color: "#00E5FF",
+            marginBottom: 15,
+          }}
+        >
+          🎯 ปรึกษาโค้ชเพื่อวางแผนฟื้นฟูเฉพาะคุณ
+        </h2>
+
+        <p
+          style={{
+            color: "#CBD5E1",
+            lineHeight: 1.8,
+            maxWidth: 700,
+            margin: "0 auto",
+          }}
+        >
+          ผลวิเคราะห์นี้เป็นการประเมินเบื้องต้นด้วย AI
+          หากต้องการทราบสาเหตุเชิงลึก แนวทางแก้ไข
+          และโปรแกรมฟื้นฟูที่เหมาะกับร่างกายของคุณ
+          สามารถพูดคุยกับ Coach Art ได้โดยตรง
+        </p>
+
+        <a
+          href="https://lin.ee/N8dFVCF"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            marginTop: 24,
+            padding: "14px 28px",
+            background:
+              "linear-gradient(135deg,#00E5FF,#009DFF)",
+            color: "#000",
+            fontWeight: 700,
+            borderRadius: 12,
+            textDecoration: "none",
+            fontSize: 18,
+          }}
+        >
+          💬 แอด LINE เพื่อปรึกษาโค้ช
+        </a>
+      </div>
+    </>
   );
 }
