@@ -982,13 +982,13 @@ if (sideLandmarks) {
           ) * 100;
       }
 
-      setPostureMetrics({
-        shoulderTilt,
-        pelvicTilt,
-        kneeValgus,
-        footRotation,
-        cva,
-      });
+    setPostureMetrics({
+  shoulderTilt,
+  pelvicTilt,
+  kneeValgus,
+  footRotation,
+  forwardHead: cva,
+});
 
       const officeResult =
         calculateOfficeRisk(
@@ -1257,22 +1257,26 @@ const overallScore = Math.round(
   ].filter(Boolean),
 
   recommendations: [
-    postureMetrics.forwardHead > 15
-      ? "Chin Tuck"
-      : "",
+  postureMetrics.forwardHead > 15
+    ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
+    : "",
 
-    postureMetrics.forwardHead > 15
-      ? "Wall Angel"
-      : "",
+  postureMetrics.forwardHead > 15
+    ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
+    : "",
 
-    postureMetrics.shoulderTilt > 5
-      ? "Band Pull Apart"
-      : "",
+  postureMetrics.shoulderTilt > 5
+    ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
+    : "",
 
-    postureMetrics.pelvicTilt > 5
-      ? "Hip Bridge"
-      : "",
-  ].filter(Boolean),
+  postureMetrics.pelvicTilt > 5
+    ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
+    : "",
+
+  postureMetrics.pelvicTilt > 5
+    ? "Clamshell 3 เซ็ต x 12 ครั้ง"
+    : "",
+].filter(Boolean),
 },
 
       injuryRisk: {
@@ -1413,56 +1417,76 @@ Forward Head: ${postureMetrics.forwardHead}
   injuryRisks,
   analysisSummary,
 
-
   rootCause: rootCauses,
-
   recommendation: [...new Set(exercises)],
-
   runningAdvice: advice,
 
   officeRisk,
-
   officeLevel,
+
+  officeSyndrome: {
+    risk: officeRisk,
+    level: officeLevel,
+
+    findings: [
+      postureMetrics.forwardHead > 15
+        ? "Forward Head Posture"
+        : "",
+
+      postureMetrics.shoulderTilt > 5
+        ? "Shoulder Imbalance"
+        : "",
+
+      postureMetrics.pelvicTilt > 5
+        ? "Pelvic Asymmetry"
+        : "",
+    ].filter(Boolean),
+
+    recommendations: [
+      postureMetrics.forwardHead > 15
+        ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
+        : "",
+
+      postureMetrics.forwardHead > 15
+        ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
+        : "",
+
+      postureMetrics.shoulderTilt > 5
+        ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
+        : "",
+
+      postureMetrics.pelvicTilt > 5
+        ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
+        : "",
+
+      postureMetrics.pelvicTilt > 5
+        ? "Clamshell 3 เซ็ต x 12 ครั้ง"
+        : "",
+    ].filter(Boolean),
+  },
 
   movementScore: stableScore,
 
   diagnosis,
-
   riskLevel: stableRiskLevel,
 
   kneeAngle: stableKneeAngle,
-
   hipDrop: stableHipDrop,
   overstride: maxLockedOverstride.current,
 
-cadence:
-  maxLockedOverstride.current > 10
-    ? "Low"
-    : "Normal",
+  cadence:
+    maxLockedOverstride.current > 10
+      ? "Low"
+      : "Normal",
 
   kneeValgus: postureMetrics.kneeValgus,
-
   pelvicTilt: postureMetrics.pelvicTilt,
-
   forwardHead: postureMetrics.forwardHead,
-
   shoulderTilt: postureMetrics.shoulderTilt,
-
   footRotation: postureMetrics.footRotation,
 
   createdAt: new Date().toISOString(),
 };
-console.log(
-  "REPORT DATA",
-  reportData
-);
-if (!user) {
-  alert("กรุณา Login ก่อน");
-  return;
-}
-console.log("USER ID =", user?.id);
-console.log("REPORT =", reportData);
-
 
 await supabase
   .from("reports")
@@ -1485,6 +1509,7 @@ await supabase
     const { jsPDF } =
       await import("jspdf");
     console.log(document.body.innerHTML.includes("report-export"));
+    
     const reportElement =
       document.querySelector(
         "#report-export"

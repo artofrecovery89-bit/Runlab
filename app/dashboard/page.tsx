@@ -97,15 +97,14 @@ const loadReports = async () => {
   />
 
   <StatCard
-    title="OFFICE CASES"
-    value={
-      reports.filter(
-        (r) =>
-          r.report_json?.officeLevel ===
-          "HIGH"
-      ).length
-    }
-  />
+  title="OFFICE CASES"
+  value={
+    reports.filter(
+      (r) =>
+        (r.report_json?.officeRisk || 0) >= 40
+    ).length
+  }
+/>
 </div>
 
      {reports.map((report) => (
@@ -131,6 +130,19 @@ const loadReports = async () => {
 >
   {report.diagnosis}
 </h3>
+<div
+  style={{
+    marginBottom: 12,
+    fontWeight: 700,
+    color: report.is_paid
+      ? "#22c55e"
+      : "#f59e0b",
+  }}
+>
+  {report.is_paid
+    ? "🟢 Premium"
+    : "🔒 Locked"}
+</div>
 <div
   style={{
     display: "flex",

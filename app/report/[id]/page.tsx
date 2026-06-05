@@ -11,7 +11,8 @@ export default function ReportPage() {
   const params = useParams();
 
   const reportId = params.id as string;
-
+  const [qrImage, setQrImage] =
+    useState("");
   const [report, setReport] = useState<any>(null);
   
   useEffect(() => {
@@ -124,24 +125,107 @@ export default function ReportPage() {
   }
 
 const data = report.report_json || {};
+console.log("REPORT =", report);
+console.log(
+  JSON.stringify(data, null, 2)
+);
+console.log("OFFICE =", data.officeSyndrome);
 const risks =
   data.injuryRisks || {};
 const office =
   data.officeSyndrome || {};
-  
+const findings =
+  office.findings || [];
+
+const recommendations =
+  office.recommendations || [];
+const handlePayment = async () => {
+  try {
+    const res = await fetch(
+      "/api/create-payment",
+      {
+        method: "POST",
+      }
+    );
+
+    const data = await res.json();
+
+    console.log(data);
+
+    if (data.qrImage) {
+      setQrImage(data.qrImage);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+
   return (
-    <div
-      id="report-export"
+  <div
+    id="report-export"
+    style={{
+      minHeight: "100vh",
+      background: "#050b14",
+      color: "#fff",
+      padding: 40,
+      maxWidth: 1200,
+      margin: "0 auto",
+    }}
+  >
+
+    {!report?.is_paid && (
+      <div
+        style={{
+          background: "#1a1a1a",
+          border: "1px solid #f59e0b",
+          borderRadius: 16,
+          padding: 24,
+          marginBottom: 24,
+        }}
+      >
+        <h2>
+          🔒 Premium Report
+        </h2>
+
+        <p>
+          ปลดล็อกรายงานฉบับเต็ม
+          พร้อม PDF และคำแนะนำเชิงลึก
+        </p>
+
+        <button
+  onClick={handlePayment}
+  style={{
+    background:
+      "linear-gradient(135deg,#00E5FF,#009DFF)",
+    color: "#000",
+    border: "none",
+    padding: "12px 24px",
+    borderRadius: 10,
+    fontWeight: 700,
+    cursor: "pointer",
+  }}
+>
+  🔓 ปลดล็อก 500 บาท
+</button>
+{qrImage && (
+  <div style={{ marginTop: 20 }}>
+    <h3>สแกนเพื่อชำระเงิน</h3>
+
+    <img
+      src={qrImage}
+      alt="PromptPay QR"
       style={{
-        minHeight: "100vh",
-        background: "#050b14",
-        color: "#fff",
-        padding: 40,
-        maxWidth: 1200,
-        margin: "0 auto",
+        width: 280,
+        borderRadius: 12,
       }}
-    >
+    />
+  </div>
+)}
+      </div>
+    )}
    <div
+   
   style={{
     display: "flex",
     justifyContent: "space-between",
@@ -228,21 +312,14 @@ const office =
   </div>
 </div>
 
-      <button
-        onClick={downloadReport}
-        style={{
-          background: "#00e5ff",
-          color: "#000",
-          border: "none",
-          padding: "12px 20px",
-          borderRadius: 12,
-          fontWeight: 700,
-          cursor: "pointer",
-          marginBottom: 30,
-        }}
-      >
-        Download PDF
-      </button>
+{report?.is_paid && (
+  
+  <button
+    onClick={downloadReport}
+  >
+    Download PDF
+  </button>
+)}
 
       <div
         style={{
@@ -306,7 +383,8 @@ const office =
   value={risks.shinSplints || 0}
 />
 </div>
-
+{report?.is_paid && (
+  <>
       <Section title="Executive Summary">
   <div
     style={{
@@ -341,7 +419,7 @@ const office =
           "No Data"}
       </Section>
 
-     <Section title="Office Syndrome Analysis">
+   <Section title="Office Syndrome Analysis">
 
   <div>
     <strong>Risk Score:</strong>{" "}
@@ -361,6 +439,44 @@ const office =
       <li>Shoulder Tilt</li>
       <li>Pelvic Tilt</li>
     </ul>
+  </div>
+
+  {/* Findings */}
+  <div style={{ marginTop: 20 }}>
+    <h3>Findings</h3>
+
+    {(data.officeSyndrome?.findings || []).map(
+      (item: string) => (
+        <div
+          key={item}
+          style={{
+            marginTop: 8,
+            color: "#ef4444",
+          }}
+        >
+          🔴 {item}
+        </div>
+      )
+    )}
+  </div>
+
+  {/* Recommendations */}
+  <div style={{ marginTop: 20 }}>
+    <h3>Recommendations</h3>
+
+    {(data.officeSyndrome?.recommendations || []).map(
+      (item: string) => (
+        <div
+          key={item}
+          style={{
+            marginTop: 8,
+            color: "#10b981",
+          }}
+        >
+          ✅ {item}
+        </div>
+      )
+    )}
   </div>
 
 </Section>
@@ -391,7 +507,8 @@ const office =
     </div>
   </div>
 </Section>
-
+  </>
+)}
       <div
         style={{
           marginTop: 40,
