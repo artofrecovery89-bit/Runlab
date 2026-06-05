@@ -6,19 +6,30 @@ const omise = Omise({
   secretKey: process.env.OMISE_SECRET_KEY!,
 });
 
-export async function POST() {
+export async function POST(
+  req: Request
+) {
   try {
-    const source = await omise.sources.create({
-      type: "promptpay",
-      amount: 50000,
-      currency: "THB",
-    });
-const charge =
-  await omise.charges.create({
-    amount: 50000,
-    currency: "THB",
-    source: source.id,
-  });
+    const { reportId } =
+      await req.json();
+
+    const source =
+      await omise.sources.create({
+        type: "promptpay",
+        amount: 50000,
+        currency: "THB",
+      });
+
+    const charge =
+      await omise.charges.create({
+        amount: 50000,
+        currency: "THB",
+        source: source.id,
+
+        metadata: {
+          reportId,
+        },
+      });
 
 console.log(
   "CHARGE =",

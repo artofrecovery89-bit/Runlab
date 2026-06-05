@@ -11,22 +11,20 @@ export default function ReportPage() {
   const params = useParams();
 
   const reportId = params.id as string;
+
   const [qrImage, setQrImage] =
     useState("");
-  const [report, setReport] = useState<any>(null);
-  
-  useEffect(() => {
-  if (!reportId) return;
 
-  loadReport();
-}, [reportId]);
+  const [report, setReport] =
+    useState<any>(null);
 
   const loadReport = async () => {
-    const { data, error } = await supabase
-      .from("reports")
-      .select("*")
-      .eq("id", reportId)
-      .single();
+    const { data, error } =
+      await supabase
+        .from("reports")
+        .select("*")
+        .eq("id", reportId)
+        .single();
 
     if (error) {
       console.error(error);
@@ -36,7 +34,24 @@ export default function ReportPage() {
     setReport(data);
   };
 
+  useEffect(() => {
+    loadReport();
+
+    const interval = setInterval(() => {
+      loadReport();
+    }, 5000);
+
+    return () =>
+      clearInterval(interval);
+  }, [reportId]);
+
+  
+
   const downloadReport = async () => {
+      if (!report?.is_paid) {
+    alert("กรุณาปลดล็อกรายงานก่อน");
+    return;
+  }
     const reportElement =
       document.getElementById("report-export");
 
@@ -140,25 +155,29 @@ const findings =
 const recommendations =
   office.recommendations || [];
 const handlePayment = async () => {
-  try {
-    const res = await fetch(
-      "/api/create-payment",
-      {
-        method: "POST",
-      }
-    );
-
-    const data = await res.json();
-
-    console.log(data);
-
-    if (data.qrImage) {
-      setQrImage(data.qrImage);
+  const res = await fetch(
+    "/api/create-payment",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        reportId: report.id,
+      }),
     }
-  } catch (error) {
-    console.error(error);
+  );
+
+  const data = await res.json();
+
+  console.log(data);
+
+  if (data.qrImage) {
+    setQrImage(data.qrImage);
   }
 };
+
+   
 
 
   return (
@@ -222,6 +241,21 @@ const handlePayment = async () => {
     />
   </div>
 )}
+  {report?.is_paid && (
+  <div
+    style={{
+      background: "#052e16",
+      border: "1px solid #22c55e",
+      color: "#22c55e",
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 20,
+    }}
+  >
+    ✅ Payment Successful
+  </div>
+)}
+
       </div>
     )}
    <div
