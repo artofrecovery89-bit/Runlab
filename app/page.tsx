@@ -47,18 +47,38 @@ const calcAngle = (a: any, b: any, c: any) => {
   return deg;
 };
 function calcCVA(
-  ear: { x: number; y: number },
-  shoulder: { x: number; y: number }
+  ear: any,
+  shoulder: any
 ) {
-  const dx = ear.x - shoulder.x;
-  const dy = shoulder.y - ear.y;
+  if (!ear || !shoulder)
+    return 50;
+
+  const dx =
+    shoulder.x - ear.x;
+
+  const dy =
+    shoulder.y - ear.y;
 
   const angle =
-    Math.atan2(dy, dx) * (180 / Math.PI);
+    Math.atan2(
+      Math.abs(dy),
+      Math.abs(dx)
+    ) *
+    (180 / Math.PI);
 
-  return Math.abs(angle);
+  console.log({
+    dx,
+    dy,
+    angle
+  });
+
+  return Number(
+    angle.toFixed(1)
+  );
 }
-// 2. ฟังก์ชันวัดมุมคอ (Forward Head)
+
+
+// 2. ฟังก์ชันวัดมุมคอ (Neck Angle)
 const calcHeadAngle = (ear: any, shoulder: any) => {
   if (!ear || !shoulder) return 0;
   const rad = Math.atan2(ear.x - shoulder.x, ear.y - shoulder.y);
@@ -66,54 +86,83 @@ const calcHeadAngle = (ear: any, shoulder: any) => {
 };
 
 // 3. ฟังก์ชันประเมินความเสี่ยง (รวมในตัวเดียว)
-const getPostureRisk = (headAngle: number) => {
-  if (headAngle > 20) return { level: 'High', color: 'red', msg: 'เสี่ยงออฟฟิศซินโดรมระดับสูง' };
-  if (headAngle > 10) return { level: 'Medium', color: 'orange', msg: 'ควรปรับท่านั่ง' };
-  return { level: 'Low', color: 'green', msg: 'ท่าทางปกติ' };
+const getPostureRisk = (
+  cva: number
+) => {
+
+  if (cva < 44) {
+    return {
+      level: "High",
+      color: "red",
+      msg: "Neck Angle Posture ระดับสูง"
+    };
+  }
+
+  if (cva < 48) {
+    return {
+      level: "Medium",
+      color: "orange",
+      msg: "เริ่มมีภาวะ Neck Angle Posture"
+    };
+  }
+
+  return {
+    level: "Low",
+    color: "green",
+    msg: "แนวศีรษะอยู่ในเกณฑ์ปกติ"
+  };
 };
 const calculateOfficeRisk = (
-  forwardHead: number,
-  shoulderTilt: number,
-  pelvicTilt: number
+  cva: number,
+  shoulderAsymmetry: number,
+  pelvicAsymmetry: number
 ) => {
-  const headScore =
-    forwardHead > 30
-      ? 100
-      : forwardHead > 20
-        ? 75
-        : forwardHead > 10
-          ? 50
-          : 10;
+const headScore =
+  cva < 44 ? 100 :
+  cva < 48 ? 80 :
+  cva < 52 ? 60 :
+  cva < 56 ? 40 :
+  cva < 60 ? 20 :
+  0;
 
-  const shoulderScore =
-    shoulderTilt > 10
-      ? 100
-      : shoulderTilt > 5
-        ? 60
-        : 20;
+const shoulderScore =
+  shoulderAsymmetry > 5 ? 100 :
+  shoulderAsymmetry > 3 ? 50 :
+  0;
 
-  const pelvicScore =
-    pelvicTilt > 10
-      ? 100
-      : pelvicTilt > 5
-        ? 60
-        : 20;
+const pelvicScore =
+  pelvicAsymmetry > 5 ? 100 :
+  pelvicAsymmetry > 3 ? 50 :
+  0;
 
-  const risk = Math.round(
-    headScore * 0.5 +
-    shoulderScore * 0.3 +
-    pelvicScore * 0.2
-  );
-
-  const level =
-    risk >= 70
-      ? "HIGH"
-      : risk >= 40
+  const risk = Math.max(
+  10,
+  Math.round(
+    headScore * 0.6 +
+    shoulderScore * 0.25 +
+    pelvicScore * 0.15
+  )
+);
+console.log("NEW OFFICE RISK", {
+  cva,
+  shoulderAsymmetry,
+  pelvicAsymmetry,
+  headScore,
+  shoulderScore,
+  pelvicScore,
+  risk,
+});
+  return {
+    risk,
+    level:
+      risk >= 70
+        ? "HIGH"
+        : risk >= 40
         ? "MEDIUM"
-        : "LOW";
-
-  return { risk, level };
+        : "LOW",
+  };
 };
+
 const POSE_CONNECTIONS = [
   [11, 13], [13, 15], [12, 14], [14, 16],
   [11, 12], [11, 23], [12, 24], [23, 24],
@@ -122,29 +171,6 @@ const POSE_CONNECTIONS = [
 ];
 
 
-
-const analyzePostureRisk = (landmarks: any) => {
-  if (!landmarks) return { level: 'N/A', msg: 'ไม่พบข้อมูล' };
- function calcCVA(ear: any, shoulder: any) {
-  if (!ear || !shoulder) return 55;
-
-  const dx = ear.x - shoulder.x;
-  const dy = shoulder.y - ear.y;
-
-  if (!isFinite(dx) || !isFinite(dy)) {
-    return 55;
-  }
-
-  return Math.abs(
-    Math.atan2(dy, dx) * 180 / Math.PI
-  );
-}
-  
-  if (headAngle > 20) return { level: 'High', color: 'red', msg: 'เสี่ยงออฟฟิศซินโดรมระดับสูง' };
-  if (headAngle > 10) return { level: 'Medium', color: 'orange', msg: 'ควรปรับท่านั่ง' };
-  return { level: 'Low', color: 'green', msg: 'ท่าทางปกติ' };
-};
-// -------------------------
 function drawPoseSkeleton(ctx: CanvasRenderingContext2D, landmarks: any[], w: number, h: number) {
   ctx.strokeStyle = "#00e5ff";
   ctx.lineWidth = 3;
@@ -539,11 +565,11 @@ interface RunLabReport {
   };
 
   staticAnalysis: {
-    shoulderTilt: number;
-    pelvicTilt: number;
+    shoulderAsymmetry: number;
+    pelvicAsymmetry: number;
     kneeValgus: number;
-    footRotation: number;
-    forwardHead: number;
+    footWidth: number;
+    neckAngle: number;
   };
 
   dynamicAnalysis: {
@@ -562,12 +588,12 @@ interface RunLabReport {
     risk: number;
     level: "LOW" | "MEDIUM" | "HIGH";
 
-    forwardHead: number;
+    neckAngle: number;
     roundedShoulder: number;
     upperCross: number;
     lowerCross: number;
-    shoulderTilt: number;
-    pelvicTilt: number;
+    shoulderAsymmetry: number;
+    pelvicAsymmetry: number;
     findings: string[];
     recommendations: string[];
   };
@@ -782,13 +808,22 @@ console.log("USER =", user);
 
 
   const framesCount = useRef<number>(0);
-  const maxLockedKnee = useRef<number>(156);
+  const maxLockedKnee =
+  useRef<number>(0);
   const maxLockedDrop = useRef<number>(3);
   const maxLockedOverstride = useRef<number>(8.5);
 
+  const contactOverstride = useRef<number>(0);
+const lastAnkleY = useRef<number | null>(null);
+const contactDetected = useRef(false);
   const [postureMetrics, setPostureMetrics] = useState({
-    shoulderTilt: 0, pelvicTilt: 0, kneeValgus: 0, footRotation: 0, forwardHead: 0,
-  });
+  shoulderAsymmetry: 0,
+  pelvicAsymmetry: 0,
+  kneeValgus: 0,
+  footWidth: 0,
+  neckAngle: 0,
+  forwardHeadScore: 0,
+});
 
   const [postureAnalyzed, setPostureAnalyzed] = useState(false);
   const [videoURL, setVideoURL] = useState("");
@@ -914,11 +949,11 @@ if (!Pose) {
       let sideLandmarks = null;
       let backLandmarks = null;
 
-      let shoulderTilt = 0;
-      let pelvicTilt = 0;
+      let shoulderAsymmetry = 0;
+      let pelvicAsymmetry = 0;
       let kneeValgus = 0;
-      let footRotation = 0;
-      let cva = 55;
+      let footWidth = 0;
+      let cva ;
 
 
       if (postureImages.front) {
@@ -936,31 +971,65 @@ if (postureImages.back) {
       console.log("front image", postureImages.front);
       console.log("side image", postureImages.side);
       console.log("back image", postureImages.back);
-      // Shoulder Tilt
+      // Shoulder Asymmetry
       if (frontLandmarks) {
-        shoulderTilt =
-          Math.abs(
-            frontLandmarks[11].y -
-            frontLandmarks[12].y
-          ) * 100;
-      }
+      shoulderAsymmetry =
+        Math.abs(
+      frontLandmarks[11].y -
+      frontLandmarks[12].y
+    ) * 100;
+}
 
-      // Pelvic Tilt
+      // Pelvic Asymmetry
       if (backLandmarks) {
-        pelvicTilt =
+        pelvicAsymmetry =
           Math.abs(
             backLandmarks[23].y -
             backLandmarks[24].y
           ) * 100;
       }
 
-     // CVA
+   // CVA
 if (sideLandmarks) {
+
+  const ear =
+    sideLandmarks[7].visibility >
+    sideLandmarks[8].visibility
+      ? sideLandmarks[7]
+      : sideLandmarks[8];
+
+  const shoulder =
+    sideLandmarks[11].visibility >
+    sideLandmarks[12].visibility
+      ? sideLandmarks[11]
+      : sideLandmarks[12];
+
   cva = calcCVA(
-    sideLandmarks[7],
-    sideLandmarks[11]
+    ear,
+    shoulder
   );
+
+  console.log("SELECTED", {
+    ear,
+    shoulder
+  });
+
+  console.log("CVA", cva);
 }
+
+const forwardHeadScore =
+  cva >= 50
+    ? 0
+    : Math.min(
+        100,
+        Math.round(
+          (50 - cva) * 5
+        )
+      );
+console.log(
+  "FORWARD HEAD SCORE",
+  forwardHeadScore
+);
 
       // Knee Valgus
       if (frontLandmarks) {
@@ -973,28 +1042,87 @@ if (sideLandmarks) {
             ) - 180
           ) / 2;
       }
-      // Foot Rotation
-      if (backLandmarks) {
-        footRotation =
-          Math.abs(
-            backLandmarks[31].x -
-            backLandmarks[32].x
-          ) * 100;
-      }
+      // Foot Width
+if (backLandmarks) {
+  footWidth =
+    Math.abs(
+      backLandmarks[31].x -
+      backLandmarks[32].x
+    ) * 100;
+}
 
-    setPostureMetrics({
-  shoulderTilt,
-  pelvicTilt,
+  setPostureMetrics({
+  shoulderAsymmetry,
+  pelvicAsymmetry,
   kneeValgus,
-  footRotation,
-  forwardHead: cva,
+  footWidth,
+  neckAngle: cva,
+  forwardHeadScore,
+});
+setReportData((prev: any) => ({
+  ...prev,
+
+  officeSyndrome: {
+    risk: officeResult.risk,
+    level: officeResult.level,
+
+    neckAngle: cva,
+    forwardHeadScore,
+
+    shoulderAsymmetry,
+    pelvicAsymmetry,
+
+    findings: [
+      forwardHeadScore > 20
+        ? "Forward Head Posture"
+        : null,
+
+      shoulderAsymmetry > 5
+        ? "Shoulder Imbalance"
+        : null,
+
+      pelvicAsymmetry > 5
+        ? "Pelvic Asymmetry"
+        : null,
+    ].filter(Boolean),
+
+    recommendations: [
+      forwardHeadScore > 20
+        ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
+        : null,
+
+      forwardHeadScore > 20
+        ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
+        : null,
+
+      shoulderAsymmetry > 5
+        ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
+        : null,
+
+      pelvicAsymmetry > 5
+        ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
+        : null,
+
+      pelvicAsymmetry > 5
+        ? "Clamshell 3 เซ็ต x 12 ครั้ง"
+        : null,
+    ].filter(Boolean),
+  },
+}));
+console.log("SETTING POSTURE", {
+  shoulderAsymmetry,
+  pelvicAsymmetry,
+  kneeValgus,
+  footWidth,
+  neckAngle: cva,
+  forwardHeadScore,
 });
 
       const officeResult =
         calculateOfficeRisk(
           cva,
-          shoulderTilt,
-          pelvicTilt
+          shoulderAsymmetry,
+          pelvicAsymmetry
         )
 
       setOfficeRisk(
@@ -1007,15 +1135,15 @@ if (sideLandmarks) {
       setPostureAnalyzed(true);
 console.log("OFFICE RESULT", officeResult);
 console.log("POSTURE", {
-  shoulderTilt,
-  pelvicTilt,
+  shoulderAsymmetry,
+  pelvicAsymmetry,
   cva,
 });
       console.log({
-        shoulderTilt,
-        pelvicTilt,
+        shoulderAsymmetry,
+        pelvicAsymmetry,
         kneeValgus,
-        footRotation,
+        footWidth,
         cva,
       });// คำนวณค่าต่างๆ ต่อ
 
@@ -1060,35 +1188,77 @@ console.log("POSTURE", {
       if (results.poseLandmarks) {
         const lm = results.poseLandmarks;
         framesCount.current += 1;
-
         drawPoseSkeleton(ctx, lm, canvas.width, canvas.height);
 
         const currentKnee = calcAngle(lm[24], lm[26], lm[28]);
         const currentDropRaw = Math.abs(lm[23].y - lm[24].y) * 180;
-        const currentOverstrideRaw = Math.abs(lm[28].x - lm[24].x) * 100;
+        
+  const ankleY = lm[28].y;
+        if (lastAnkleY.current !== null) {
 
-        if (framesCount.current > 30) {
-          if (currentKnee > 120 && currentKnee < maxLockedKnee.current) {
-            maxLockedKnee.current = currentKnee;
-          }
-          if (currentDropRaw < 12 && currentDropRaw > maxLockedDrop.current) {
-            maxLockedDrop.current = parseFloat(currentDropRaw.toFixed(1));
-          }
-          if (currentOverstrideRaw < 25 && currentOverstrideRaw > maxLockedOverstride.current) {
-            maxLockedOverstride.current = parseFloat(currentOverstrideRaw.toFixed(1));
-          }
-        }
+  const descending =
+    ankleY > lastAnkleY.current;
+
+  const nearGround =
+    ankleY > 0.85;
+
+  if (
+    descending &&
+    nearGround &&
+    !contactDetected.current
+  ) {
+
+    const comX =
+(
+  lm[11].x +
+  lm[12].x +
+  lm[23].x +
+  lm[24].x
+) / 4;
+
+contactOverstride.current =
+  Math.abs(
+    lm[28].x - comX
+  ) * 100;
+
+
+    contactDetected.current = true;
+  }
+
+  if (ankleY < 0.75) {
+    contactDetected.current = false;
+  }
+}
+
+lastAnkleY.current = ankleY;
+
+       
+         
 
         const finalKneeAngle = maxLockedKnee.current;
         const finalPelvicDrop = maxLockedDrop.current;
-        const finalOverstride = maxLockedOverstride.current;
+       const finalOverstride =contactOverstride.current;
 
         const kneeDiff = 160 - finalKneeAngle;
         const calcKneeRisk = Math.min(95, Math.max(15, (kneeDiff > 0 ? kneeDiff * 2.8 : 15) + (postureMetrics.kneeValgus * 2.2)));
-        const calcItbRisk = Math.min(95, Math.max(12, (finalPelvicDrop * 12) + (postureMetrics.pelvicTilt * 2.5)));
+        const calcItbRisk = Math.min(95, Math.max(12, (finalPelvicDrop * 8) + (postureMetrics.pelvicAsymmetry * 2.5)));
         const baseOverstrideRisk = finalOverstride > 10 ? (finalOverstride - 10) * 6 : 5;
-        const calcAchillesRisk = Math.min(95, Math.max(10, baseOverstrideRisk + (postureMetrics.footRotation * 2.5)));
-        const calcShinRisk = Math.min(95, Math.max(10, (baseOverstrideRisk * 1.2) + (postureMetrics.footRotation * 3.0)));
+        const calcAchillesRisk =
+  Math.min(
+    95,
+    Math.max(
+      10,
+      baseOverstrideRisk
+    )
+  );
+        const calcShinRisk =
+  Math.min(
+    95,
+    Math.max(
+      10,
+      baseOverstrideRisk * 1.2
+    )
+  );
 
         const computedRisks = {
           runnersKnee: Math.round(calcKneeRisk),
@@ -1096,36 +1266,70 @@ console.log("POSTURE", {
           itBand: Math.round(calcItbRisk),
           shinSplints: Math.round(calcShinRisk),
         };
-        setInjuryRisks(computedRisks);
-
-        const maxRiskValue = Math.max(computedRisks.runnersKnee, computedRisks.achilles, computedRisks.itBand, computedRisks.shinSplints);
-        const coreScore = Math.min(98, Math.max(40, 100 - (maxRiskValue * 0.4)));
-
-        setStableScore(Math.round(coreScore));
-        setStableKneeAngle(finalKneeAngle);
-        setStableHipDrop(Math.round(finalPelvicDrop));
-
-      const newSubMetrics = {
-  eff: Math.round(coreScore),
-  hip: Math.round(Math.max(30, 100 - (finalPelvicDrop * 8) - postureMetrics.pelvicTilt)),
-  knee: Math.round(Math.max(30, 100 - (kneeDiff * 2) - postureMetrics.kneeValgus)),
-  mob: Math.round(Math.min(100, Math.max(45, 100 - (calcAchillesRisk * 0.3)))),
-  bal: Math.round(Math.max(40, 100 - (finalPelvicDrop * 5) - postureMetrics.shoulderTilt))
-};
-
-setSubMetrics(newSubMetrics);
-
-const overallScore = Math.round(
-(
-  newSubMetrics.eff +
-  newSubMetrics.hip +
-  newSubMetrics.knee +
-  newSubMetrics.mob +
-  newSubMetrics.bal
-) / 5
+      const maxRiskValue = Math.max(
+  computedRisks.runnersKnee,
+  computedRisks.achilles,
+  computedRisks.itBand,
+  computedRisks.shinSplints
 );
 
-        setStableScore(overallScore);
+const coreScore = Math.min(
+  98,
+  Math.max(40, 100 - (maxRiskValue * 0.4))
+);
+
+if (framesCount.current % 15 === 0) {
+
+  setInjuryRisks(computedRisks);
+
+  setStableScore(
+    Math.round(coreScore)
+  );
+
+  setStableKneeAngle(
+    finalKneeAngle
+  );
+
+  setStableHipDrop(
+    Math.round(finalPelvicDrop)
+  );
+
+}
+ const newSubMetrics = {
+  eff: Math.round(coreScore),
+  hip: Math.round(Math.max(30, 100 - (finalPelvicDrop * 8) - postureMetrics.pelvicAsymmetry)),
+  knee: Math.round(Math.max(30, 100 - (kneeDiff * 2) - postureMetrics.kneeValgus)),
+  mob: Math.round(Math.min(100, Math.max(45, 100 - (calcAchillesRisk * 0.3)))),
+  bal: Math.round(Math.max(40, 100 - (finalPelvicDrop * 5) - postureMetrics.shoulderAsymmetry))
+};
+
+const overallScore = Math.round(
+  (
+    newSubMetrics.eff +
+    newSubMetrics.hip +
+    newSubMetrics.knee +
+    newSubMetrics.mob +
+    newSubMetrics.bal
+  ) / 5
+);
+
+if (framesCount.current % 15 === 0) {
+
+  setInjuryRisks(computedRisks);
+
+  setStableScore(overallScore);
+
+  setStableKneeAngle(finalKneeAngle);
+
+  setStableHipDrop(
+    Math.round(finalPelvicDrop)
+  );
+
+  setSubMetrics(newSubMetrics);
+
+}
+
+       
         const sortedRisks = Object.entries(computedRisks).sort((a, b) => b[1] - a[1]);
         const peakInjuryName = sortedRisks[0][0];
         const peakInjuryScore = sortedRisks[0][1];
@@ -1146,7 +1350,7 @@ const overallScore = Math.round(
           } else if (peakInjuryName === "itBand") {
             diag = "IT Band Syndrome (เจ็บข้างเข่าด้านนอก)";
             rec = "เพิ่มความแข็งแรงของกล้ามเนื้อสะโพกส่วนข้าง ด้วยท่า Clamshell หรือเตะขาออกด้านข้างเพื่อดึงแกนเชิงกรานให้นิ่ง";
-            sum = `แกนสะโพกเอียงทรุดตัวขณะก้าวลงน้ำหนัก ผนวกน้ำหนักเสริมแรงจากประวัติแนวกระดูกเชิงกรานเอียง (Pelvic Tilt: ${postureMetrics.pelvicTilt}%)`;
+            sum = `แกนสะโพกเอียงทรุดตัวขณะก้าวลงน้ำหนัก ผนวกน้ำหนักเสริมแรงจากประวัติแนวกระดูกเชิงกรานเอียง (Pelvic Asymmetry: ${postureMetrics.pelvicAsymmetry}%)`;
           } else if (peakInjuryName === "shinSplints") {
             diag = "Shin Splints (เจ็บหน้าแข้ง)";
             rec = "ลดการกระแทกส้นเท้าอย่างรุนแรง ฝึกความแข็งแรงของกล้ามเนื้อหน้าแข้ง และปรับจังหวะมาลงกลางเท้า";
@@ -1220,62 +1424,68 @@ const overallScore = Math.round(
       user: {},
 
       staticAnalysis: {
-        shoulderTilt: postureMetrics.shoulderTilt,
-        pelvicTilt: postureMetrics.pelvicTilt,
+        shoulderAsymmetry: postureMetrics.shoulderAsymmetry,
+        pelvicAsymmetry: postureMetrics.pelvicAsymmetry,
         kneeValgus: postureMetrics.kneeValgus,
-        footRotation: postureMetrics.footRotation,
-        forwardHead: postureMetrics.forwardHead,
+        footWidth: postureMetrics.footWidth,
+        neckAngle: postureMetrics.neckAngle,
       },
 
       dynamicAnalysis: {
         kneeAngle: stableKneeAngle || 0,
         hipDrop: stableHipDrop || 0,
-        overstride: maxLockedOverstride.current,
+        overstrideEstimate:contactOverstride.current,
         score: stableScore,
       },
 
-      officeSyndrome: {
+    officeSyndrome: {
   risk: officeRisk,
   level: officeLevel,
 
-  forwardHead: postureMetrics.forwardHead,
-  shoulderTilt: postureMetrics.shoulderTilt,
-  pelvicTilt: postureMetrics.pelvicTilt,
+  neckAngle: postureMetrics.neckAngle,
+  forwardHeadScore:
+    postureMetrics.forwardHeadScore,
+
+  shoulderAsymmetry:
+    postureMetrics.shoulderAsymmetry,
+
+  pelvicAsymmetry:
+    postureMetrics.pelvicAsymmetry,
 
   findings: [
-    postureMetrics.forwardHead > 15
-      ? "Forward Head Posture"
+    postureMetrics.neckAngle > 15
+      ? "Neck Angle Posture"
       : "",
 
-    postureMetrics.shoulderTilt > 5
+    postureMetrics.shoulderAsymmetry > 5
       ? "Shoulder Imbalance"
       : "",
 
-    postureMetrics.pelvicTilt > 5
+    postureMetrics.pelvicAsymmetry > 5
       ? "Pelvic Asymmetry"
       : "",
   ].filter(Boolean),
 
-  recommendations: [
-  postureMetrics.forwardHead > 15
+ recommendations: [
+  postureMetrics.neckAngle > 15
     ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-    : "",
+    : null,
 
-  postureMetrics.forwardHead > 15
+  postureMetrics.neckAngle > 15
     ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-    : "",
+    : null,
 
-  postureMetrics.shoulderTilt > 5
+  postureMetrics.shoulderAsymmetry > 3
     ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-    : "",
+    : null,
 
-  postureMetrics.pelvicTilt > 5
+  postureMetrics.pelvicAsymmetry > 3
     ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
-    : "",
+    : null,
 
-  postureMetrics.pelvicTilt > 5
+  postureMetrics.pelvicAsymmetry > 3
     ? "Clamshell 3 เซ็ต x 12 ครั้ง"
-    : "",
+    : null,
 ].filter(Boolean),
 },
 
@@ -1329,7 +1539,7 @@ const overallScore = Math.round(
   95,
   60 + rootCauses.length * 10
 );
-    if (postureMetrics.footRotation > 5) {
+    if (postureMetrics.footWidth > 5) {
       rootCauses.push("Foot Control Deficit");
       exercises.push("Single Leg Balance");
     }
@@ -1399,7 +1609,7 @@ ${primaryRisk.name} (${primaryRisk.value}%)
       recommendation: [...new Set(exercises)].join(" • "),
       runningAdvice: advice.join(" • "),
     });
- const analysisSummary = `
+const analysisSummary = `
 Movement Score ${stableScore}/100
 
 Primary Risk: ${primaryRisk.name}
@@ -1410,8 +1620,19 @@ Hip Drop: ${stableHipDrop}
 
 Knee Valgus: ${postureMetrics.kneeValgus}
 
-Forward Head: ${postureMetrics.forwardHead}
+Neck Angle (CVA): ${Math.round(
+  postureMetrics.neckAngle || 0
+)}°
 `;
+
+console.log("REPORT BUILD", {
+  cva,
+  forwardHeadScore,
+  shoulderAsymmetry,
+  pelvicAsymmetry,
+});
+
+console.log("POSTURE METRICS", postureMetrics);
     const reportData = {
   executiveSummary,
   injuryRisks,
@@ -1420,50 +1641,55 @@ Forward Head: ${postureMetrics.forwardHead}
   rootCause: rootCauses,
   recommendation: [...new Set(exercises)],
   runningAdvice: advice,
-
+  
   officeRisk,
   officeLevel,
-
+  
   officeSyndrome: {
-    risk: officeRisk,
-    level: officeLevel,
+  risk: officeRisk,
+  level: officeLevel,
 
-    findings: [
-      postureMetrics.forwardHead > 15
-        ? "Forward Head Posture"
-        : "",
+  neckAngle: cva,
+  forwardHeadScore,
+  shoulderAsymmetry,
+  pelvicAsymmetry,
 
-      postureMetrics.shoulderTilt > 5
-        ? "Shoulder Imbalance"
-        : "",
+  findings: [
+    cva < 48
+      ? "Forward Head Posture"
+      : "",
 
-      postureMetrics.pelvicTilt > 5
-        ? "Pelvic Asymmetry"
-        : "",
-    ].filter(Boolean),
+    shoulderAsymmetry > 5
+      ? "Shoulder Imbalance"
+      : "",
 
-    recommendations: [
-      postureMetrics.forwardHead > 15
-        ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-        : "",
+    pelvicAsymmetry > 5
+      ? "Pelvic Asymmetry"
+      : "",
+  ].filter(Boolean),
 
-      postureMetrics.forwardHead > 15
-        ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-        : "",
+  recommendations: [
+    cva < 48
+      ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
+      : "",
 
-      postureMetrics.shoulderTilt > 5
-        ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-        : "",
+    cva < 48
+      ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
+      : "",
 
-      postureMetrics.pelvicTilt > 5
-        ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
-        : "",
+    shoulderAsymmetry > 5
+      ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
+      : "",
 
-      postureMetrics.pelvicTilt > 5
-        ? "Clamshell 3 เซ็ต x 12 ครั้ง"
-        : "",
-    ].filter(Boolean),
-  },
+    pelvicAsymmetry > 5
+      ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
+      : "",
+
+    pelvicAsymmetry > 5
+      ? "Clamshell 3 เซ็ต x 12 ครั้ง"
+      : "",
+  ].filter(Boolean),
+},
 
   movementScore: stableScore,
 
@@ -1472,29 +1698,30 @@ Forward Head: ${postureMetrics.forwardHead}
 
   kneeAngle: stableKneeAngle,
   hipDrop: stableHipDrop,
-  overstride: maxLockedOverstride.current,
+  overstrideEstimate: contactOverstride.current,
 
-  cadence:
-    maxLockedOverstride.current > 10
-      ? "Low"
-      : "Normal",
+  cadence: "Not Available",
 
   kneeValgus: postureMetrics.kneeValgus,
-  pelvicTilt: postureMetrics.pelvicTilt,
-  forwardHead: postureMetrics.forwardHead,
-  shoulderTilt: postureMetrics.shoulderTilt,
-  footRotation: postureMetrics.footRotation,
+  pelvicAsymmetry: postureMetrics.pelvicAsymmetry,
+  neckAngle: postureMetrics.neckAngle,
+  shoulderAsymmetry: postureMetrics.shoulderAsymmetry,
+  footWidth: postureMetrics.footWidth,
 
   createdAt: new Date().toISOString(),
 };
-
+setReportData(reportData);
+console.log(
+  "REPORT STATE",
+  reportData.officeSyndrome
+);
 await supabase
   .from("reports")
   .insert({
     user_id: user?.id,
     score: stableScore,
     risk_level: stableRiskLevel,
-    diagnosis: primaryRisk.name,
+    primaryRisk: primaryRisk.name,
     report_json: reportData,
     is_paid: false,
   });
@@ -2057,7 +2284,7 @@ navBtn: {
                 <li>Knee Angle : {stableKneeAngle}°</li>
                 <li>Hip Drop : {stableHipDrop}°</li>
                 <li>Knee Valgus : {postureMetrics.kneeValgus}°</li>
-                <li>Pelvic Tilt : {postureMetrics.pelvicTilt}°</li>
+                <li>Pelvic Asymmetry : {postureMetrics.pelvicAsymmetry}°</li>
                 <li>Overstride : {maxLockedOverstride.current}%</li>
               </ul>
               <h3>จุดที่ควรปรับปรุง</h3>
@@ -2219,7 +2446,7 @@ navBtn: {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 26 }}>
             <Stat label="RUNNING SCORE" val={stableScore || "—"} color="#00e5ff" />
             <Stat label="RISK STATUS" val={stableRiskLevel} color={riskColor} />
-            <Stat label="MAX KNEE EXTENSION" val={stableKneeAngle !== null ? `${stableKneeAngle}°` : "—"} color="#3b82f6" />
+            <Stat label="Peak Knee Angle" val={stableKneeAngle !== null ? `${stableKneeAngle}°` : "—"} color="#3b82f6" />
             <Stat label="MAX DYNAMIC HIP DROP" val={stableHipDrop !== null ? `${stableHipDrop}°` : "—"} color="#a78bfa" />
           </div>
 
@@ -2302,12 +2529,23 @@ navBtn: {
     OFFICE SYNDROME ANALYSIS
   </h3>
 
-  {reportData?.officeSyndrome && (
-    <>
-      <OfficeRiskCard
-        risk={reportData.officeSyndrome.risk}
-        level={reportData.officeSyndrome.level}
-      />
+ {reportData?.officeSyndrome && (
+  <>
+
+    <pre
+      style={{
+        color: "white",
+        fontSize: 12,
+        overflow: "auto",
+      }}
+    >
+   
+    </pre>
+
+    <OfficeRiskCard
+      risk={reportData.officeSyndrome.risk}
+      level={reportData.officeSyndrome.level}
+    />
 
       <div
         style={{
@@ -2316,22 +2554,30 @@ navBtn: {
           gap: 16,
           marginTop: 20,
         }}
+        
       >
+        
         <Stat
-          label="FORWARD HEAD"
-          val={`${Math.round(reportData.officeSyndrome.forwardHead)}°`}
+          label="CRANIOVERTEBRAL ANGLE (CVA)"
+          val={`${Math.round(reportData.officeSyndrome.neckAngle)}°`}
           color="#ef4444"
         />
-
         <Stat
-          label="SHOULDER TILT"
-          val={`${Math.round(reportData.officeSyndrome.shoulderTilt)}°`}
+        label="FORWARD HEAD SCORE"
+        val={`${Math.round(
+         reportData.officeSyndrome.forwardHeadScore
+        )}%`}
+        color="#ef4444"
+        />
+        <Stat
+          label="SHOULDER ASYMMETRY"
+          val={`${Math.round(reportData.officeSyndrome.shoulderAsymmetry)}%`}
           color="#f59e0b"
         />
 
         <Stat
-          label="PELVIC TILT"
-          val={`${Math.round(reportData.officeSyndrome.pelvicTilt)}°`}
+          label="PELVIC ASYMMETRY"
+          val={`${Math.round(reportData.officeSyndrome.pelvicAsymmetry)}%`}
           color="#3b82f6"
         />
       </div>
@@ -2355,18 +2601,29 @@ navBtn: {
           RECOMMENDED CORRECTIVE EXERCISES
         </div>
 
-        {reportData.officeSyndrome.recommendations.map((item, index) => (
-          <div
-            key={index}
-            style={{
-              color: "#00e5ff",
-              marginBottom: 8,
-              fontWeight: 600,
-            }}
-          >
-            ✓ {item}
-          </div>
-        ))}
+       {reportData.officeSyndrome.recommendations.length > 0 ? (
+  reportData.officeSyndrome.recommendations.map((item, index) => (
+    <div
+      key={index}
+      style={{
+        color: "#00e5ff",
+        marginBottom: 8,
+        fontWeight: 600,
+      }}
+    >
+      ✓ {item}
+    </div>
+  ))
+) : (
+  <div
+    style={{
+      color: "#94a3b8",
+      fontSize: 14,
+    }}
+  >
+    ไม่พบความผิดปกติที่ต้องแก้ไขเพิ่มเติม
+  </div>
+)}
       </div>
     </>
   )}
