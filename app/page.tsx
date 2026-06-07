@@ -114,15 +114,31 @@ const getPostureRisk = (
 };
 const calculateOfficeRisk = (
   cva: number,
+  roundedShoulder: number,
+  upperCross: number,
+  lowerCross: number,
   shoulderAsymmetry: number,
   pelvicAsymmetry: number
 ) => {
 const headScore =
   cva < 44 ? 100 :
-  cva < 48 ? 80 :
-  cva < 52 ? 60 :
-  cva < 56 ? 40 :
-  cva < 60 ? 20 :
+  cva < 48 ? 70 :
+  cva < 52 ? 40 :
+  0;
+
+const roundedScore =
+  roundedShoulder > 4 ? 100 :
+  roundedShoulder > 2 ? 50 :
+  0;
+
+const upperCrossScore =
+  upperCross > 40 ? 100 :
+  upperCross > 20 ? 50 :
+  0;
+
+const lowerCrossScore =
+  lowerCross > 40 ? 100 :
+  lowerCross > 20 ? 50 :
   0;
 
 const shoulderScore =
@@ -135,21 +151,31 @@ const pelvicScore =
   pelvicAsymmetry > 3 ? 50 :
   0;
 
-  const risk = Math.max(
-  10,
-  Math.round(
-    headScore * 0.6 +
-    shoulderScore * 0.25 +
-    pelvicScore * 0.15
-  )
+ const risk = Math.round(
+  headScore * 0.25 +
+  roundedScore * 0.25 +
+  upperCrossScore * 0.25 +
+  lowerCrossScore * 0.10 +
+  shoulderScore * 0.075 +
+  pelvicScore * 0.075
 );
 console.log("NEW OFFICE RISK", {
   cva,
+
+  roundedShoulder,
+  upperCross,
+  lowerCross,
+
   shoulderAsymmetry,
   pelvicAsymmetry,
+
   headScore,
+  roundedScore,
+  upperCrossScore,
+  lowerCrossScore,
   shoulderScore,
   pelvicScore,
+
   risk,
 });
   return {
@@ -816,13 +842,18 @@ console.log("USER =", user);
   const contactOverstride = useRef<number>(0);
 const lastAnkleY = useRef<number | null>(null);
 const contactDetected = useRef(false);
-  const [postureMetrics, setPostureMetrics] = useState({
+const [postureMetrics, setPostureMetrics] = useState({
   shoulderAsymmetry: 0,
   pelvicAsymmetry: 0,
   kneeValgus: 0,
   footWidth: 0,
+
   neckAngle: 0,
   forwardHeadScore: 0,
+
+  roundedShoulder: 0,
+  upperCross: 0,
+  lowerCross: 0,
 });
 
   const [postureAnalyzed, setPostureAnalyzed] = useState(false);
@@ -945,15 +976,20 @@ if (!Pose) {
 
     try {
 
-      let frontLandmarks = null;
-      let sideLandmarks = null;
-      let backLandmarks = null;
+    let frontLandmarks = null;
+  let sideLandmarks = null;
+  let backLandmarks = null;
 
-      let shoulderAsymmetry = 0;
-      let pelvicAsymmetry = 0;
-      let kneeValgus = 0;
-      let footWidth = 0;
-      let cva ;
+  let shoulderAsymmetry = 0;
+  let pelvicAsymmetry = 0;
+  let kneeValgus = 0;
+  let footWidth = 0;
+
+  let cva = 50;
+
+  let roundedShoulder = 0;
+  let upperCross = 0;
+  let lowerCross = 0;
 
 
       if (postureImages.front) {
@@ -968,9 +1004,7 @@ if (postureImages.back) {
   backLandmarks = await analyzeImage(postureImages.back);
 }
 
-      console.log("front image", postureImages.front);
-      console.log("side image", postureImages.side);
-      console.log("back image", postureImages.back);
+   
       // Shoulder Asymmetry
       if (frontLandmarks) {
       shoulderAsymmetry =
@@ -1008,13 +1042,11 @@ if (sideLandmarks) {
     ear,
     shoulder
   );
+  roundedShoulder =
+  Math.abs(
+    shoulder.x - ear.x
+  ) * 100;
 
-  console.log("SELECTED", {
-    ear,
-    shoulder
-  });
-
-  console.log("CVA", cva);
 }
 
 const forwardHeadScore =
@@ -1026,10 +1058,7 @@ const forwardHeadScore =
           (50 - cva) * 5
         )
       );
-console.log(
-  "FORWARD HEAD SCORE",
-  forwardHeadScore
-);
+
 
       // Knee Valgus
       if (frontLandmarks) {
@@ -1051,79 +1080,131 @@ if (backLandmarks) {
     ) * 100;
 }
 
-  setPostureMetrics({
+const roundedShoulderRisk =
+  roundedShoulder > 12
+    ? 100
+    : roundedShoulder > 2
+    ? 60
+    : roundedShoulder > 5
+    ? 30
+    : 0;
+
+upperCross = Math.round(
+  forwardHeadScore * 0.6 +
+  roundedShoulderRisk * 0.4
+);
+
+lowerCross = Math.round(
+  (pelvicAsymmetry * 10) * 0.5 +
+  (stableHipDrop || 0) * 0.5
+);
+
+setPostureMetrics({
   shoulderAsymmetry,
   pelvicAsymmetry,
   kneeValgus,
   footWidth,
+
   neckAngle: cva,
   forwardHeadScore,
+
+  roundedShoulder,
+  upperCross,
+  lowerCross,
 });
 setReportData((prev: any) => ({
   ...prev,
 
-  officeSyndrome: {
-    risk: officeResult.risk,
-    level: officeResult.level,
+officeSyndrome: {
+  risk: officeResult.risk,
+  level: officeResult.level,
 
-    neckAngle: cva,
-    forwardHeadScore,
-
-    shoulderAsymmetry,
-    pelvicAsymmetry,
-
-    findings: [
-      forwardHeadScore > 20
-        ? "Forward Head Posture"
-        : null,
-
-      shoulderAsymmetry > 5
-        ? "Shoulder Imbalance"
-        : null,
-
-      pelvicAsymmetry > 5
-        ? "Pelvic Asymmetry"
-        : null,
-    ].filter(Boolean),
-
-    recommendations: [
-      forwardHeadScore > 20
-        ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-        : null,
-
-      forwardHeadScore > 20
-        ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-        : null,
-
-      shoulderAsymmetry > 5
-        ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-        : null,
-
-      pelvicAsymmetry > 5
-        ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
-        : null,
-
-      pelvicAsymmetry > 5
-        ? "Clamshell 3 เซ็ต x 12 ครั้ง"
-        : null,
-    ].filter(Boolean),
-  },
-}));
-console.log("SETTING POSTURE", {
-  shoulderAsymmetry,
-  pelvicAsymmetry,
-  kneeValgus,
-  footWidth,
   neckAngle: cva,
   forwardHeadScore,
-});
+
+  roundedShoulder,
+  upperCross,
+  lowerCross,
+
+  shoulderAsymmetry,
+  pelvicAsymmetry,
+
+  findings: [
+
+    forwardHeadScore > 20
+      ? "Forward Head Posture"
+      : null,
+
+    roundedShoulder > 2
+      ? "Rounded Shoulder"
+      : null,
+
+    upperCross > 20
+      ? "Upper Cross Syndrome"
+      : null,
+
+    lowerCross > 40
+      ? "Lower Cross Syndrome"
+      : null,
+
+    shoulderAsymmetry > 5
+      ? "Shoulder Imbalance"
+      : null,
+
+    pelvicAsymmetry > 5
+      ? "Pelvic Asymmetry"
+      : null,
+
+  ].filter(Boolean),
+
+  recommendations: [
+
+    forwardHeadScore > 20
+      ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
+      : null,
+
+    forwardHeadScore > 20
+      ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
+      : null,
+
+    roundedShoulder > 2
+      ? "Doorway Stretch 3 เซ็ต x 30 วินาที"
+      : null,
+
+    roundedShoulder > 2
+      ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
+      : null,
+
+    upperCross > 20
+      ? "Deep Neck Flexor Training"
+      : null,
+
+    lowerCross > 40
+      ? "Hip Flexor Stretch"
+      : null,
+
+    pelvicAsymmetry > 5
+      ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
+      : null,
+
+    pelvicAsymmetry > 5
+      ? "Clamshell 3 เซ็ต x 12 ครั้ง"
+      : null,
+
+  ].filter(Boolean),
+},
+}));
+
 
       const officeResult =
-        calculateOfficeRisk(
-          cva,
-          shoulderAsymmetry,
-          pelvicAsymmetry
-        )
+  calculateOfficeRisk(
+    cva,
+    roundedShoulder,
+    upperCross,
+    lowerCross,
+    shoulderAsymmetry,
+    pelvicAsymmetry
+  );
 
       setOfficeRisk(
         officeResult.risk
@@ -1133,19 +1214,7 @@ console.log("SETTING POSTURE", {
         officeResult.level
       );
       setPostureAnalyzed(true);
-console.log("OFFICE RESULT", officeResult);
-console.log("POSTURE", {
-  shoulderAsymmetry,
-  pelvicAsymmetry,
-  cva,
-});
-      console.log({
-        shoulderAsymmetry,
-        pelvicAsymmetry,
-        kneeValgus,
-        footWidth,
-        cva,
-      });// คำนวณค่าต่างๆ ต่อ
+
 
     } catch (err) {
 
@@ -1438,56 +1507,7 @@ if (framesCount.current % 15 === 0) {
         score: stableScore,
       },
 
-    officeSyndrome: {
-  risk: officeRisk,
-  level: officeLevel,
-
-  neckAngle: postureMetrics.neckAngle,
-  forwardHeadScore:
-    postureMetrics.forwardHeadScore,
-
-  shoulderAsymmetry:
-    postureMetrics.shoulderAsymmetry,
-
-  pelvicAsymmetry:
-    postureMetrics.pelvicAsymmetry,
-
-  findings: [
-    postureMetrics.neckAngle > 15
-      ? "Neck Angle Posture"
-      : "",
-
-    postureMetrics.shoulderAsymmetry > 5
-      ? "Shoulder Imbalance"
-      : "",
-
-    postureMetrics.pelvicAsymmetry > 5
-      ? "Pelvic Asymmetry"
-      : "",
-  ].filter(Boolean),
-
- recommendations: [
-  postureMetrics.neckAngle > 15
-    ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-    : null,
-
-  postureMetrics.neckAngle > 15
-    ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-    : null,
-
-  postureMetrics.shoulderAsymmetry > 3
-    ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-    : null,
-
-  postureMetrics.pelvicAsymmetry > 3
-    ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
-    : null,
-
-  postureMetrics.pelvicAsymmetry > 3
-    ? "Clamshell 3 เซ็ต x 12 ครั้ง"
-    : null,
-].filter(Boolean),
-},
+   
 
       injuryRisk: {
         runnersKnee: injuryRisks.runnersKnee,
@@ -1495,7 +1515,34 @@ if (framesCount.current % 15 === 0) {
         itBand: injuryRisks.itBand,
         shinSplints: injuryRisks.shinSplints,
       },
+ officeSyndrome: {
+    risk: officeRisk,
+    level: officeLevel,
 
+    neckAngle: postureMetrics.neckAngle || 0,
+
+    forwardHeadScore:
+      postureMetrics.forwardHeadScore || 0,
+
+    roundedShoulder:
+      postureMetrics.roundedShoulder || 0,
+
+    upperCross:
+      postureMetrics.upperCross || 0,
+
+    lowerCross:
+      postureMetrics.lowerCross || 0,
+
+    shoulderAsymmetry:
+      postureMetrics.shoulderAsymmetry || 0,
+
+    pelvicAsymmetry:
+      postureMetrics.pelvicAsymmetry || 0,
+
+    findings: [],
+
+    recommendations: [],
+  },
       summary: {
         score: stableScore,
         riskLevel: stableRiskLevel,
@@ -1625,11 +1672,11 @@ Neck Angle (CVA): ${Math.round(
 )}°
 `;
 
-console.log("REPORT BUILD", {
-  cva,
+console.log("VALUES", {
+  neckAngle: postureMetrics.neckAngle,
   forwardHeadScore,
-  shoulderAsymmetry,
-  pelvicAsymmetry,
+  roundedShoulder,
+  upperCross,
 });
 
 console.log("POSTURE METRICS", postureMetrics);
@@ -1645,49 +1692,80 @@ console.log("POSTURE METRICS", postureMetrics);
   officeRisk,
   officeLevel,
   
-  officeSyndrome: {
+ officeSyndrome: {
   risk: officeRisk,
   level: officeLevel,
 
-  neckAngle: cva,
-  forwardHeadScore,
-  shoulderAsymmetry,
-  pelvicAsymmetry,
+  neckAngle: postureMetrics.neckAngle || 0,
+
+  forwardHeadScore:
+    postureMetrics.forwardHeadScore || 0,
+
+  roundedShoulder:
+    postureMetrics.roundedShoulder || 0,
+
+  upperCross:
+    postureMetrics.upperCross || 0,
+
+  lowerCross:
+    postureMetrics.lowerCross || 0,
+
+  shoulderAsymmetry:
+    postureMetrics.shoulderAsymmetry || 0,
+
+  pelvicAsymmetry:
+    postureMetrics.pelvicAsymmetry || 0,
 
   findings: [
-    cva < 48
+    (postureMetrics.forwardHeadScore || 0) > 20
       ? "Forward Head Posture"
-      : "",
+      : null,
 
-    shoulderAsymmetry > 5
+    (postureMetrics.roundedShoulder || 0) > 2
+      ? "Rounded Shoulder"
+      : null,
+
+    (postureMetrics.upperCross || 0) > 20
+      ? "Upper Cross Syndrome"
+      : null,
+
+    (postureMetrics.lowerCross || 0) > 20
+      ? "Lower Cross Syndrome"
+      : null,
+
+    (postureMetrics.shoulderAsymmetry || 0) > 5
       ? "Shoulder Imbalance"
-      : "",
+      : null,
 
-    pelvicAsymmetry > 5
+    (postureMetrics.pelvicAsymmetry || 0) > 5
       ? "Pelvic Asymmetry"
-      : "",
+      : null,
   ].filter(Boolean),
 
   recommendations: [
-    cva < 48
+    (postureMetrics.forwardHeadScore || 0) > 20
       ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-      : "",
+      : null,
 
-    cva < 48
+    (postureMetrics.forwardHeadScore || 0) > 20
       ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-      : "",
+      : null,
 
-    shoulderAsymmetry > 5
+    (postureMetrics.roundedShoulder || 0) > 2
+      ? "Doorway Stretch 3 เซ็ต x 30 วินาที"
+      : null,
+
+    (postureMetrics.roundedShoulder || 0) > 2
       ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-      : "",
+      : null,
 
-    pelvicAsymmetry > 5
-      ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
-      : "",
+    (postureMetrics.upperCross || 0) > 20
+      ? "Deep Neck Flexor Training"
+      : null,
 
-    pelvicAsymmetry > 5
-      ? "Clamshell 3 เซ็ต x 12 ครั้ง"
-      : "",
+    (postureMetrics.lowerCross || 0) > 20
+      ? "Hip Flexor Stretch"
+      : null,
   ].filter(Boolean),
 },
 
@@ -2532,16 +2610,6 @@ navBtn: {
  {reportData?.officeSyndrome && (
   <>
 
-    <pre
-      style={{
-        color: "white",
-        fontSize: 12,
-        overflow: "auto",
-      }}
-    >
-   
-    </pre>
-
     <OfficeRiskCard
       risk={reportData.officeSyndrome.risk}
       level={reportData.officeSyndrome.level}
@@ -2562,6 +2630,29 @@ navBtn: {
           val={`${Math.round(reportData.officeSyndrome.neckAngle)}°`}
           color="#ef4444"
         />
+        <Stat
+  label="ROUNDED SHOULDER"
+  val={`${Math.round(
+    reportData.officeSyndrome.roundedShoulder || 0
+  )}`}
+  color="#8b5cf6"
+/>
+
+<Stat
+  label="UPPER CROSS"
+  val={`${Math.round(
+    reportData.officeSyndrome.upperCross || 0
+  )}%`}
+  color="#ec4899"
+/>
+
+<Stat
+  label="LOWER CROSS"
+  val={`${Math.round(
+    reportData.officeSyndrome.lowerCross || 0
+  )}%`}
+  color="#14b8a6"
+/>
         <Stat
         label="FORWARD HEAD SCORE"
         val={`${Math.round(
@@ -2601,7 +2692,7 @@ navBtn: {
           RECOMMENDED CORRECTIVE EXERCISES
         </div>
 
-       {reportData.officeSyndrome.recommendations.length > 0 ? (
+       {(reportData?.officeSyndrome?.recommendations?.length || 0) > 0 ? (
   reportData.officeSyndrome.recommendations.map((item, index) => (
     <div
       key={index}

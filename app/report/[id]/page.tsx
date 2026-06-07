@@ -140,11 +140,7 @@ export default function ReportPage() {
   }
 
 const data = report.report_json || {};
-console.log("REPORT =", report);
-console.log(
-  JSON.stringify(data, null, 2)
-);
-console.log("OFFICE =", data.officeSyndrome);
+
 const risks =
   data.injuryRisks || {};
 const office =
