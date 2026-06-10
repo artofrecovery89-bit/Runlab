@@ -29,10 +29,12 @@ const loadReports = async () => {
 
   console.log("SEARCH USER =", user.id);
 
-  const { data, error } = await supabase
+  const { data, error } =
+  await supabase
     .from("reports")
-    .select("*")
-    .eq("user_id", user.id);
+    .select("*");
+
+console.log(data);
 
   console.log("REPORT DATA =", data);
   console.log("REPORT ERROR =", error);
@@ -40,6 +42,7 @@ const loadReports = async () => {
   setReports(data || []);
 };
 
+ 
   return (
     <div
   style={{
@@ -161,9 +164,17 @@ const loadReports = async () => {
 
   <span>
     📅{" "}
-    {new Date(
-      report.created_at
-    ).toLocaleDateString()}
+    {
+  new Date(report.created_at)
+    .toLocaleString("th-TH", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+}
   </span>
 </div>
 

@@ -858,7 +858,13 @@ const [postureMetrics, setPostureMetrics] = useState({
 
   const [postureAnalyzed, setPostureAnalyzed] = useState(false);
   const [videoURL, setVideoURL] = useState("");
-  const [postureImages, setPostureImages] = useState({ front: "", side: "", back: "" });
+  const [postureImages, setPostureImages] =
+  useState({
+    front: "",
+    left: "",
+    right: "",
+    back: "",
+  });
 
   // DEMO INITIAL STATE
   const [officeRisk, setOfficeRisk] = useState(0);
@@ -950,7 +956,10 @@ if (!Pose) {
 
             setCapturedImage(image);
           }
-          resolve(results.poseLandmarks || null);
+          resolve({
+  landmarks:
+    results.poseLandmarks || [],
+});
 
         });
 
@@ -964,21 +973,10 @@ if (!Pose) {
     });
   };
   const processStaticPosture = async () => {
-
-    if (
-      !postureImages.front &&
-      !postureImages.side &&
-      !postureImages.back
-    ) {
-      alert("กรุณาอัปโหลดรูปท่ายืนเพื่อคำนวณครับ");
-      return;
-    }
-
-    try {
-
-    let frontLandmarks = null;
-  let sideLandmarks = null;
-  let backLandmarks = null;
+  let frontLandmarks = [];
+  let leftLandmarks = [];
+  let rightLandmarks = [];
+  let backLandmarks = [];
 
   let shoulderAsymmetry = 0;
   let pelvicAsymmetry = 0;
@@ -986,51 +984,160 @@ if (!Pose) {
   let footWidth = 0;
 
   let cva = 50;
-
+  let forwardHeadScore = 0;
   let roundedShoulder = 0;
   let upperCross = 0;
   let lowerCross = 0;
-
-
-      if (postureImages.front) {
-  frontLandmarks = await analyzeImage(postureImages.front);
+  let officeResult = {
+  risk: 0,
+  level: "LOW",
+};
+    if (
+  !postureImages.front ||
+  !postureImages.left ||
+  !postureImages.right ||
+  !postureImages.back
+) {
+  alert("กรุณาอัปโหลดรูปทั้ง 4 ด้าน");
+  return;
 }
 
-if (postureImages.side) {
-  sideLandmarks = await analyzeImage(postureImages.side);
-}
+    try {
+ 
 
-if (postureImages.back) {
-  backLandmarks = await analyzeImage(postureImages.back);
-}
 
-   
-      // Shoulder Asymmetry
-      if (frontLandmarks) {
-      shoulderAsymmetry =
-        Math.abs(
+
+const frontData =
+ await analyzeImage(postureImages.front)
+
+const leftData =
+ await analyzeImage(postureImages.left)
+
+const rightData =
+ await analyzeImage(postureImages.right)
+
+const backData =
+ await analyzeImage(postureImages.back)
+
+ console.log("FRONT", frontData);
+console.log("LEFT", leftData);
+console.log("RIGHT", rightData);
+console.log("BACK", backData);
+
+frontLandmarks =
+  frontData?.landmarks || [];
+
+leftLandmarks =
+  leftData?.landmarks || [];
+
+rightLandmarks =
+  rightData?.landmarks || [];
+
+backLandmarks =
+  backData?.landmarks || [];
+  console.log(
+  "Front Count",
+  frontLandmarks?.length
+);
+
+console.log(
+  "Back Count",
+  backLandmarks?.length
+);
+
+console.log(
+  "Left Count",
+  leftLandmarks?.length
+);
+
+console.log(
+  "Right Count",
+  rightLandmarks?.length
+);
+   console.log("frontLandmarks =", frontLandmarks);
+console.log("length =", frontLandmarks?.length);
+console.log("11 =", frontLandmarks?.[11]);
+console.log("12 =", frontLandmarks?.[12]);
+     
+// Shoulder Asymmetry
+
+let frontShoulder = 0;
+
+if (
+  frontLandmarks &&
+  frontLandmarks.length > 12 &&
+  frontLandmarks[11] &&
+  frontLandmarks[12]
+) {
+  frontShoulder =
+    Math.abs(
       frontLandmarks[11].y -
       frontLandmarks[12].y
     ) * 100;
+} else {
+  console.log(
+    "Front landmarks missing",
+    frontLandmarks
+  );
+}
+let backShoulder = 0;
+
+if (
+  backLandmarks &&
+  backLandmarks.length > 12 &&
+  backLandmarks[11] &&
+  backLandmarks[12]
+) {
+  backShoulder =
+    Math.abs(
+      backLandmarks[11].y -
+      backLandmarks[12].y
+    ) * 100;
 }
 
-      // Pelvic Asymmetry
-      if (backLandmarks) {
-        pelvicAsymmetry =
-          Math.abs(
-            backLandmarks[23].y -
-            backLandmarks[24].y
-          ) * 100;
-      }
+shoulderAsymmetry =
+  (frontShoulder + backShoulder) / 2;
+      
+  // Pelvic Asymmetry
+      if (
+  backLandmarks &&
+  backLandmarks.length > 24 &&
+  backLandmarks[23] &&
+  backLandmarks[24]
+) {
+  pelvicAsymmetry =
+    Math.abs(
+      backLandmarks[23].y -
+      backLandmarks[24].y
+    ) * 100;
+}
 
    // CVA
-if (sideLandmarks) {
+   const sideLandmarks =
+  leftLandmarks &&
+  rightLandmarks
+    ? (
+        leftLandmarks[7]?.visibility >
+        rightLandmarks[7]?.visibility
+      )
+        ? leftLandmarks
+        : rightLandmarks
+    : leftLandmarks || rightLandmarks;
+if (
+  sideLandmarks &&
+  sideLandmarks.length > 12 &&
+  sideLandmarks[7] &&
+  sideLandmarks[8] &&
+  sideLandmarks[11] &&
+  sideLandmarks[12]
+) {
 
   const ear =
     sideLandmarks[7].visibility >
     sideLandmarks[8].visibility
       ? sideLandmarks[7]
       : sideLandmarks[8];
+      
 
   const shoulder =
     sideLandmarks[11].visibility >
@@ -1049,7 +1156,7 @@ if (sideLandmarks) {
 
 }
 
-const forwardHeadScore =
+forwardHeadScore =
   cva >= 50
     ? 0
     : Math.min(
@@ -1061,18 +1168,29 @@ const forwardHeadScore =
 
 
       // Knee Valgus
-      if (frontLandmarks) {
-        kneeValgus =
-          Math.abs(
-            calcAngle(
-              frontLandmarks[23],
-              frontLandmarks[25],
-              frontLandmarks[27]
-            ) - 180
-          ) / 2;
-      }
+     if (
+  frontLandmarks &&
+  frontLandmarks.length > 27 &&
+  frontLandmarks[23] &&
+  frontLandmarks[25] &&
+  frontLandmarks[27]
+) {
+  kneeValgus =
+    Math.abs(
+      calcAngle(
+        frontLandmarks[23],
+        frontLandmarks[25],
+        frontLandmarks[27]
+      ) - 180
+    ) / 2;
+}
       // Foot Width
-if (backLandmarks) {
+if (
+  backLandmarks &&
+  backLandmarks.length > 32 &&
+  backLandmarks[31] &&
+  backLandmarks[32]
+) {
   footWidth =
     Math.abs(
       backLandmarks[31].x -
@@ -1083,9 +1201,9 @@ if (backLandmarks) {
 const roundedShoulderRisk =
   roundedShoulder > 12
     ? 100
-    : roundedShoulder > 2
-    ? 60
     : roundedShoulder > 5
+    ? 60
+    : roundedShoulder > 2
     ? 30
     : 0;
 
@@ -1112,91 +1230,7 @@ setPostureMetrics({
   upperCross,
   lowerCross,
 });
-setReportData((prev: any) => ({
-  ...prev,
-
-officeSyndrome: {
-  risk: officeResult.risk,
-  level: officeResult.level,
-
-  neckAngle: cva,
-  forwardHeadScore,
-
-  roundedShoulder,
-  upperCross,
-  lowerCross,
-
-  shoulderAsymmetry,
-  pelvicAsymmetry,
-
-  findings: [
-
-    forwardHeadScore > 20
-      ? "Forward Head Posture"
-      : null,
-
-    roundedShoulder > 2
-      ? "Rounded Shoulder"
-      : null,
-
-    upperCross > 20
-      ? "Upper Cross Syndrome"
-      : null,
-
-    lowerCross > 40
-      ? "Lower Cross Syndrome"
-      : null,
-
-    shoulderAsymmetry > 5
-      ? "Shoulder Imbalance"
-      : null,
-
-    pelvicAsymmetry > 5
-      ? "Pelvic Asymmetry"
-      : null,
-
-  ].filter(Boolean),
-
-  recommendations: [
-
-    forwardHeadScore > 20
-      ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-      : null,
-
-    forwardHeadScore > 20
-      ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-      : null,
-
-    roundedShoulder > 2
-      ? "Doorway Stretch 3 เซ็ต x 30 วินาที"
-      : null,
-
-    roundedShoulder > 2
-      ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-      : null,
-
-    upperCross > 20
-      ? "Deep Neck Flexor Training"
-      : null,
-
-    lowerCross > 40
-      ? "Hip Flexor Stretch"
-      : null,
-
-    pelvicAsymmetry > 5
-      ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
-      : null,
-
-    pelvicAsymmetry > 5
-      ? "Clamshell 3 เซ็ต x 12 ครั้ง"
-      : null,
-
-  ].filter(Boolean),
-},
-}));
-
-
-      const officeResult =
+officeResult =
   calculateOfficeRisk(
     cva,
     roundedShoulder,
@@ -1221,6 +1255,103 @@ officeSyndrome: {
       console.error(err);
 
     }
+   const newReportData = {
+  ...(reportData || {}),
+
+  landmarks: {
+    front: reportData?.landmarks?.front,
+left: reportData?.landmarks?.left,
+right: reportData?.landmarks?.right,
+back: reportData?.landmarks?.back,
+  },
+
+  assessmentImages: {
+    front: postureImages.front,
+    left: postureImages.left,
+    right: postureImages.right,
+    back: postureImages.back,
+  },
+
+  officeSyndrome: {
+    risk: officeResult.risk,
+    level: officeResult.level,
+
+    neckAngle: cva,
+    forwardHeadScore,
+
+    roundedShoulder,
+    upperCross,
+    lowerCross,
+
+    shoulderAsymmetry,
+    pelvicAsymmetry,
+
+    findings: [
+      forwardHeadScore > 20
+        ? "Forward Head Posture"
+        : null,
+
+      roundedShoulder > 2
+        ? "Rounded Shoulder"
+        : null,
+
+      upperCross > 20
+        ? "Upper Cross Syndrome"
+        : null,
+
+      lowerCross > 40
+        ? "Lower Cross Syndrome"
+        : null,
+
+      shoulderAsymmetry > 5
+        ? "Shoulder Imbalance"
+        : null,
+
+      pelvicAsymmetry > 5
+        ? "Pelvic Asymmetry"
+        : null,
+    ].filter(Boolean),
+
+    recommendations: [
+      forwardHeadScore > 20
+        ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
+        : null,
+
+      forwardHeadScore > 20
+        ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
+        : null,
+
+      roundedShoulder > 2
+        ? "Doorway Stretch 3 เซ็ต x 30 วินาที"
+        : null,
+
+      roundedShoulder > 2
+        ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
+        : null,
+
+      upperCross > 20
+        ? "Deep Neck Flexor Training"
+        : null,
+
+      lowerCross > 40
+        ? "Hip Flexor Stretch"
+        : null,
+
+      pelvicAsymmetry > 5
+        ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
+        : null,
+
+      pelvicAsymmetry > 5
+        ? "Clamshell 3 เซ็ต x 12 ครั้ง"
+        : null,
+    ].filter(Boolean),
+  },
+};
+
+
+
+
+  
   };
 
 
@@ -1674,9 +1805,12 @@ Neck Angle (CVA): ${Math.round(
 
 console.log("VALUES", {
   neckAngle: postureMetrics.neckAngle,
-  forwardHeadScore,
-  roundedShoulder,
-  upperCross,
+  forwardHeadScore:
+    postureMetrics.forwardHeadScore,
+  roundedShoulder:
+    postureMetrics.roundedShoulder,
+  upperCross:
+    postureMetrics.upperCross,
 });
 
 console.log("POSTURE METRICS", postureMetrics);
@@ -1788,21 +1922,31 @@ console.log("POSTURE METRICS", postureMetrics);
 
   createdAt: new Date().toISOString(),
 };
+console.log("STEP A");
+
 setReportData(reportData);
-console.log(
-  "REPORT STATE",
-  reportData.officeSyndrome
-);
-await supabase
-  .from("reports")
-  .insert({
-    user_id: user?.id,
-    score: stableScore,
-    risk_level: stableRiskLevel,
-    primaryRisk: primaryRisk.name,
-    report_json: reportData,
-    is_paid: false,
-  });
+
+console.log("SAVE START");
+
+const { data, error } =
+  await supabase
+    .from("reports")
+    .insert({
+      user_id: user?.id,
+      score: stableScore,
+      risk_level: stableRiskLevel,
+      diagnosis,
+      report_json: reportData,
+      is_paid: false,
+    })
+    .select();
+
+console.log("INSERT DATA =", data);
+console.log("INSERT ERROR =", error);
+
+if (error) {
+  alert(error.message);
+}
 
   };
 
@@ -2110,88 +2254,149 @@ navBtn: {
       </div>
 
       {/* STEP 1: STATIC POSTURE */}
-      <div
-        id="upload-section"
+ <div
+  style={{
+    ...S.card,
+    gridColumn: "span 3",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 14,
+    background: "#070f1e",
+  }}
+>
+  <PoseSlot
+    label="รูปด้านหน้า (Front)"
+    preview={postureImages.front}
+    onFile={(f) =>
+      setPostureImages((p) => ({
+        ...p,
+        front: URL.createObjectURL(f),
+      }))
+    }
+    onClear={() =>
+      setPostureImages((p) => ({
+        ...p,
+        front: "",
+      }))
+    }
+  />
+
+  <PoseSlot
+    label="รูปด้านซ้าย (Left)"
+    preview={postureImages.left}
+    onFile={(f) =>
+      setPostureImages((p) => ({
+        ...p,
+        left: URL.createObjectURL(f),
+      }))
+    }
+    onClear={() =>
+      setPostureImages((p) => ({
+        ...p,
+        left: "",
+      }))
+    }
+  />
+
+  <PoseSlot
+    label="รูปด้านขวา (Right)"
+    preview={postureImages.right}
+    onFile={(f) =>
+      setPostureImages((p) => ({
+        ...p,
+        right: URL.createObjectURL(f),
+      }))
+    }
+    onClear={() =>
+      setPostureImages((p) => ({
+        ...p,
+        right: "",
+      }))
+    }
+  />
+
+  <PoseSlot
+    label="รูปด้านหลัง (Back)"
+    preview={postureImages.back}
+    onFile={(f) =>
+      setPostureImages((p) => ({
+        ...p,
+        back: URL.createObjectURL(f),
+      }))
+    }
+    onClear={() =>
+      setPostureImages((p) => ({
+        ...p,
+        back: "",
+      }))
+    }
+  />
+</div>
+<div
+  style={{
+    ...S.card,
+    marginTop: 20,
+    textAlign: "center",
+    background: "#070f1e",
+  }}
+>
+  <button
+    onClick={processStaticPosture}
+    style={{
+      ...S.bp,
+      width: "100%",
+      background: "#10b981",
+      color: "#fff",
+    }}
+  >
+    ประมวลผลจุดตรึงสรีระ
+  </button>
+
+  {postureAnalyzed && (
+    <div
+      style={{
+        marginTop: 20,
+        background: "#091120",
+        border: "1px solid #1e293b",
+        borderRadius: 20,
+        padding: 20,
+      }}
+    >
+      <h3
         style={{
-          background: "#050b14",
-          padding: "50px 0",
-          borderTop: "1px solid #1e293b",
-          borderBottom: "1px solid #1e293b"
+          color: "#fff",
+          marginBottom: 10,
         }}
       >
-        <div style={S.wrap}>
-          <div style={S.st}><span style={S.sn}>1</span> ตรวจสอบสรีระท่ายืนนิ่ง (Static Posture Calibration)</div>
-          <p style={S.ss}>อัปโหลดรูปถ่ายสรีระหลักเพื่อวิเคราะห์ฐานแนวกระดูกและคำนวณค่าน้ำหนักเสริมตัวคูณรายงาน</p>
+        ความเสี่ยง Office Syndrome
+      </h3>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 20, marginBottom: 20 }}>
-            <div
-
-              style={{
-                ...S.wrap,
-                display: "grid",
-                gridTemplateColumns: isMobile
-                  ? "1fr"
-                  : "1fr 400px",
-                gap: 50,
-                alignItems: "center",
-                padding: "70px 20px",
-              }}
-            ></div>
-            <div style={{ ...S.card, gridColumn: "span 3", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, background: "#070f1e" }}>
-              <PoseSlot label="รูปด้านหน้า (Front Profile)" preview={postureImages.front} onFile={(f) => setPostureImages(p => ({ ...p, front: URL.createObjectURL(f) }))} onClear={() => setPostureImages(p => ({ ...p, front: "" }))} />
-              <PoseSlot label="รูปด้านข้าง (Side Profile)" preview={postureImages.side} onFile={(f) => setPostureImages(p => ({ ...p, side: URL.createObjectURL(f) }))} onClear={() => setPostureImages(p => ({ ...p, side: "" }))} />
-              <PoseSlot label="รูปด้านหลัง (Back Profile)" preview={postureImages.back} onFile={(f) => setPostureImages(p => ({ ...p, back: URL.createObjectURL(f) }))} onClear={() => setPostureImages(p => ({ ...p, back: "" }))} />
-            </div>
-            <div style={{ ...S.card, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 14, textAlign: "center", background: "#070f1e" }}>
-              <div style={{ fontSize: 12, color: postureAnalyzed ? "#10b981" : "#e2e8f0", fontWeight: 700, padding: "4px 12px", borderRadius: 8, background: postureAnalyzed ? "rgba(16,185,129,0.1)" : "rgba(226,232,240,0.05)" }}>
-                {postureAnalyzed ? "✓ วิเคราะห์สรีระเสร็จสิ้น" : "⚠️ รอประมวลผลรูปภาพ"}
-              </div>
-              <button onClick={processStaticPosture} style={{ ...S.bp, width: "100%", background: "#10b981", color: "#fff", boxShadow: "0 4px 14px rgba(16,185,129,0.2)" }}>
-                ประมวลผลจุดตรึงสรีระ
-              </button>
-              {postureAnalyzed && (
-                <div
-                  style={{
-                    marginTop: 20,
-                    background: "#091120",
-                    border: "1px solid #1e293b",
-                    borderRadius: 20,
-                    padding: 20,
-                  }}
-                >
-                  <h3 style={{ color: "#fff", marginBottom: 10 }}>
-                    ความเสี่ยง Office Syndrome
-                  </h3>
-
-                  <div
-                    style={{
-                      fontSize: 42,
-                      fontWeight: 800,
-                      color: "#00e5ff",
-                    }}
-                  >
-                    {officeRisk}%
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: 10,
-                      color:
-                        officeLevel === "HIGH"
-                          ? "#ef4444"
-                          : officeLevel === "MEDIUM"
-                            ? "#f59e0b"
-                            : "#10b981",
-                    }}
-                  >
-                    ระดับความเสี่ยง : {officeLevel}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      <div
+        style={{
+          fontSize: 42,
+          fontWeight: 800,
+          color: "#00e5ff",
+        }}
+      >
+        {officeRisk}%
       </div>
+
+      <div
+        style={{
+          marginTop: 10,
+          color:
+            officeLevel === "HIGH"
+              ? "#ef4444"
+              : officeLevel === "MEDIUM"
+              ? "#f59e0b"
+              : "#10b981",
+        }}
+      >
+        ระดับความเสี่ยง : {officeLevel}
+      </div>
+    </div>
+  )}
+</div>
 
       {/* STEP 2: DYNAMIC VIDEO */}
       <div style={{ padding: "50px 0" }}>
