@@ -29,8 +29,8 @@ function ensureScripts() {
           s.crossOrigin = "anonymous";
           s.onload = () => res();
           s.onerror = (e) => {
-  console.error("SCRIPT LOAD ERROR", src, e);
-};
+            console.error("SCRIPT LOAD ERROR", src, e);
+          };
           document.head.appendChild(s);
         })
     )
@@ -120,72 +120,72 @@ const calculateOfficeRisk = (
   shoulderAsymmetry: number,
   pelvicAsymmetry: number
 ) => {
-const headScore =
-  cva < 44 ? 100 :
-  cva < 48 ? 70 :
-  cva < 52 ? 40 :
-  0;
+  const headScore =
+    cva < 44 ? 100 :
+      cva < 48 ? 70 :
+        cva < 52 ? 40 :
+          0;
 
-const roundedScore =
-  roundedShoulder > 4 ? 100 :
-  roundedShoulder > 2 ? 50 :
-  0;
+  const roundedScore =
+    roundedShoulder > 4 ? 100 :
+      roundedShoulder > 2 ? 50 :
+        0;
 
-const upperCrossScore =
-  upperCross > 40 ? 100 :
-  upperCross > 20 ? 50 :
-  0;
+  const upperCrossScore =
+    upperCross > 40 ? 100 :
+      upperCross > 20 ? 50 :
+        0;
 
-const lowerCrossScore =
-  lowerCross > 40 ? 100 :
-  lowerCross > 20 ? 50 :
-  0;
+  const lowerCrossScore =
+    lowerCross > 40 ? 100 :
+      lowerCross > 20 ? 50 :
+        0;
 
-const shoulderScore =
-  shoulderAsymmetry > 5 ? 100 :
-  shoulderAsymmetry > 3 ? 50 :
-  0;
+  const shoulderScore =
+    shoulderAsymmetry > 5 ? 100 :
+      shoulderAsymmetry > 3 ? 50 :
+        0;
 
-const pelvicScore =
-  pelvicAsymmetry > 5 ? 100 :
-  pelvicAsymmetry > 3 ? 50 :
-  0;
+  const pelvicScore =
+    pelvicAsymmetry > 5 ? 100 :
+      pelvicAsymmetry > 3 ? 50 :
+        0;
 
- const risk = Math.round(
-  headScore * 0.25 +
-  roundedScore * 0.25 +
-  upperCrossScore * 0.25 +
-  lowerCrossScore * 0.10 +
-  shoulderScore * 0.075 +
-  pelvicScore * 0.075
-);
-console.log("NEW OFFICE RISK", {
-  cva,
+  const risk = Math.round(
+    headScore * 0.25 +
+    roundedScore * 0.25 +
+    upperCrossScore * 0.25 +
+    lowerCrossScore * 0.10 +
+    shoulderScore * 0.075 +
+    pelvicScore * 0.075
+  );
+  console.log("NEW OFFICE RISK", {
+    cva,
 
-  roundedShoulder,
-  upperCross,
-  lowerCross,
+    roundedShoulder,
+    upperCross,
+    lowerCross,
 
-  shoulderAsymmetry,
-  pelvicAsymmetry,
+    shoulderAsymmetry,
+    pelvicAsymmetry,
 
-  headScore,
-  roundedScore,
-  upperCrossScore,
-  lowerCrossScore,
-  shoulderScore,
-  pelvicScore,
+    headScore,
+    roundedScore,
+    upperCrossScore,
+    lowerCrossScore,
+    shoulderScore,
+    pelvicScore,
 
-  risk,
-});
+    risk,
+  });
   return {
     risk,
     level:
       risk >= 70
         ? "HIGH"
         : risk >= 40
-        ? "MEDIUM"
-        : "LOW",
+          ? "MEDIUM"
+          : "LOW",
   };
 };
 
@@ -462,15 +462,15 @@ function RiskCard({
     pct > 70
       ? "ความเสี่ยงสูง"
       : pct > 40
-      ? "ความเสี่ยงปานกลาง"
-      : "ความเสี่ยงต่ำ";
+        ? "ความเสี่ยงปานกลาง"
+        : "ความเสี่ยงต่ำ";
 
   const color =
     pct > 70
       ? "#ef4444"
       : pct > 40
-      ? "#f59e0b"
-      : "#10b981";
+        ? "#f59e0b"
+        : "#10b981";
 
   return (
     <div
@@ -656,122 +656,392 @@ function PoseSlot({ label, preview, onFile, onClear }: PoseSlotProps) {
           <div style={{ fontSize: 11, color: "#475569" }}>คลิกเพื่ออัปโหลด</div>
           <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
         </label>
-      )}
+        )}
     </div>
   );
 }
 
-/* INTERACTIVE ANATOMY COMPONENT (SVG-BASED WITH DYNAMIC PULSE GLOW) */
-function InteractiveAnatomy({ risks }: { risks: { runnersKnee: number; achilles: number; itBand: number; shinSplints: number } }) {
-  const getJointColor = (pct: number) => {
-    if (pct === 0) return "#00e5ff";
-    return pct > 70 ? "#ef4444" : pct > 40 ? "#f59e0b" : "#10b981";
+function InteractiveAnatomy({
+  risks,
+  frontImage,
+}: {
+  risks: {
+    runnersKnee: number;
+    achilles: number;
+    itBand: number;
+    shinSplints: number;
+  };
+  frontImage?: string;
+}) {
+  const getRiskColor = (value: number) => {
+    if (value >= 70) return "#ef4444";
+    if (value >= 40) return "#f59e0b";
+    return "#10b981";
   };
 
+  const primaryRisk = Math.max(
+    risks.runnersKnee,
+    risks.itBand,
+    risks.achilles,
+    risks.shinSplints
+  );
+
   return (
-    <div style={{ background: "#060d1a", border: "1px solid #1e293b", borderRadius: 24, padding: "24px", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 520, boxShadow: "inset 0 0 40px rgba(0,229,255,0.02)" }}>
-      {/* CSS Animation Keyframes Injector */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @keyframes pulseGlow {
-          0% { r: 6; opacity: 0.5; stroke-width: 1; }
-          50% { r: 16; opacity: 0.8; stroke-width: 4; }
-          100% { r: 26; opacity: 0; stroke-width: 1; }
-        }
-        .glow-circle { animation: pulseGlow 1.6s infinite ease-out; transform-box: fill-box; transform-origin: center; }
-      `}} />
+    <div
+      style={{
+        background: "#07111f",
+        border: "1px solid #1e293b",
+        borderRadius: 24,
+        padding: 30,
+        marginTop: 30,
+      }}
+    >
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes pulse {
+              0% {
+                transform: scale(1);
+                opacity: .9;
+              }
+              70% {
+                transform: scale(2.2);
+                opacity: 0;
+              }
+              100% {
+                transform: scale(2.2);
+                opacity: 0;
+              }
+            }
 
-      <div style={{ position: "absolute", top: 20, left: 24 }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: "#00e5ff", letterSpacing: 1.5, display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00e5ff", display: "inline-block" }} />
-          LIVE BIO-MECHANICAL MODEL
+            .risk-pulse {
+              position:absolute;
+              border-radius:50%;
+              animation:pulse 1.8s infinite;
+            }
+          `,
+        }}
+      />
+
+      {/* HEADER */}
+      <div style={{ marginBottom: 24 }}>
+        <div
+          style={{
+            color: "#00e5ff",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 2,
+          }}
+        >
+          AI BODY RISK MAP
         </div>
-        <p style={{ fontSize: 11, color: "#475569", margin: "4px 0 0" }}>แบบจำลองชี้เป้าความเค้นสะสมตามค่าวิเคราะห์ AI</p>
-      </div>
 
-      {/* SVG RUNNER SKELETON */}
-      <svg width="100%" height="420" viewBox="0 0 240 400" style={{ marginTop: 20 }}>
-        <defs>
-          <linearGradient id="boneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#1e293b" />
-            <stop offset="50%" stopColor="#334155" />
-            <stop offset="100%" stopColor="#0f172a" />
-          </linearGradient>
-          <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-        </defs>
+        <h2
+          style={{
+            color: "#fff",
+            marginTop: 8,
+            marginBottom: 6,
+          }}
+        >
+          วิเคราะห์ความเสี่ยงเฉพาะร่างกายของคุณ
+        </h2>
 
-        {/* Background Grid Lines */}
-        <line x1="20" y1="200" x2="220" y2="200" stroke="#1e293b" strokeWidth="0.5" strokeDasharray="4 4" />
-        <line x1="120" y1="40" x2="120" y2="360" stroke="#1e293b" strokeWidth="0.5" strokeDasharray="4 4" />
-
-        {/* Human Silhouette Wireframe */}
-        <g stroke="#1e293b" strokeWidth="1" fill="none" opacity="0.6">
-          <circle cx="120" cy="65" r="18" stroke="#223554" strokeWidth="1.5" />
-          <path d="M120,83 L120,160 M100,100 L140,100 M100,100 L90,150 M140,100 L150,145" strokeWidth="1.5" />
-        </g>
-
-        {/* MAIN RUNNING BONES */}
-        <line x1="120" y1="130" x2="120" y2="170" stroke="#475569" strokeWidth="4" strokeLinecap="round" />
-        <line x1="120" y1="170" x2="90" y2="185" stroke="#64748b" strokeWidth="5" strokeLinecap="round" />
-        <line x1="90" y1="185" x2="80" y2="265" stroke="url(#boneGrad)" strokeWidth="6" strokeLinecap="round" />
-        <line x1="80" y1="265" x2="110" y2="340" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" />
-        <line x1="110" y1="340" x2="135" y2="345" stroke="#475569" strokeWidth="4" strokeLinecap="round" />
-
-        {/* Right Leg (Background / Support Leg) */}
-        <line x1="120" y1="170" x2="140" y2="190" stroke="#1e293b" strokeWidth="4" />
-        <line x1="140" y1="190" x2="155" y2="255" stroke="#1e293b" strokeWidth="4" />
-        <line x1="155" y1="255" x2="140" y2="320" stroke="#1e293b" strokeWidth="3" />
-
-        {/* DYNAMIC RISK POINTERS & INTERACTIVE DOTS */}
-
-        {/* 1. IT BAND RISK */}
-        <g>
-          <circle cx="90" cy="185" r="14" fill="none" stroke={getJointColor(risks.itBand)} className="glow-circle" />
-          <circle cx="90" cy="185" r="7" fill={getJointColor(risks.itBand)} stroke="#fff" strokeWidth="1.5" filter="url(#glowEffect)" />
-          <path d="M90,185 L35,160 L15,160" stroke="#223554" strokeWidth="1" fill="none" />
-          <text x="15" y="152" fill={getJointColor(risks.itBand)} fontSize="11" fontWeight="700">IT BAND (สะโพกเอียง): {risks.itBand}%</text>
-        </g>
-
-        {/* 2. RUNNER'S KNEE RISK */}
-        <g>
-          <circle cx="80" cy="265" r="14" fill="none" stroke={getJointColor(risks.runnersKnee)} className="glow-circle" />
-          <circle cx="80" cy="265" r="8" fill={getJointColor(risks.runnersKnee)} stroke="#fff" strokeWidth="2" filter="url(#glowEffect)" />
-          <path d="M80,265 L35,265 L15,265" stroke="#223554" strokeWidth="1" fill="none" />
-          <text x="15" y="257" fill={getJointColor(risks.runnersKnee)} fontSize="11" fontWeight="700">สะบ้าเข่า (Knee Valgus): {risks.runnersKnee}%</text>
-        </g>
-
-        {/* 3. SHIN SPLINTS RISK */}
-        <g>
-          <circle cx="92" cy="298" r="12" fill="none" stroke={getJointColor(risks.shinSplints)} className="glow-circle" />
-          <circle cx="92" cy="298" r="6" fill={getJointColor(risks.shinSplints)} stroke="#fff" strokeWidth="1.5" filter="url(#glowEffect)" />
-          <path d="M92,298 L160,298 L180,315" stroke="#223554" strokeWidth="1" fill="none" />
-          <text x="155" y="290" fill={getJointColor(risks.shinSplints)} fontSize="11" fontWeight="700" textAnchor="middle">หน้าแข้ง: {risks.shinSplints}%</text>
-        </g>
-
-        {/* 4. ACHILLES TENDONITIS RISK */}
-        <g>
-          <circle cx="110" cy="340" r="14" fill="none" stroke={getJointColor(risks.achilles)} className="glow-circle" />
-          <circle cx="110" cy="340" r="7" fill={getJointColor(risks.achilles)} stroke="#fff" strokeWidth="1.5" filter="url(#glowEffect)" />
-          <path d="M110,340 L165,340 L190,360" stroke="#223554" strokeWidth="1" fill="none" />
-          <text x="180" y="333" fill={getJointColor(risks.achilles)} fontSize="11" fontWeight="700" textAnchor="middle">เอ็นร้อยหวาย: {risks.achilles}%</text>
-        </g>
-      </svg>
-
-      {/* Color Guide Legends */}
-      <div style={{ display: "flex", gap: 16, marginTop: 16, background: "rgba(4,9,20,0.6)", padding: "8px 16px", borderRadius: 10, border: "1px solid #1e293b" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#94a3b8" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> เสี่ยงต่ำ (&lt;40%)
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#94a3b8" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} /> เสี่ยงปานกลาง (40-70%)
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#94a3b8" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} /> วิกฤต (&gt;70%)
+        <div
+          style={{
+            color: "#94a3b8",
+          }}
+        >
+          ประเมินจาก Biomechanics และ AI Movement Analysis
         </div>
       </div>
+
+      {/* GRID */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.4fr 0.8fr",
+          gap: 24,
+          alignItems: "stretch",
+        }}
+      >
+        {/* LEFT IMAGE */}
+        <div
+          style={{
+            position: "relative",
+            background: "#020617",
+            borderRadius: 20,
+            overflow: "hidden",
+          }}
+        >
+         {frontImage ? (
+  <img
+    src={frontImage}
+    alt="Front Body"
+    style={{
+      width: "100%",
+      height: 550,
+      objectFit: "contain",
+    }}
+  />
+) : (
+  <div
+    style={{
+      height: 550,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#64748b",
+    }}
+  >
+    No Front Image
+  </div>
+)}
+          
+
+          {/* RUNNER'S KNEE */}
+          <div
+            style={{
+              position: "absolute",
+              left: "48%",
+              top: "72%",
+              width: 18,
+              height: 18,
+              borderRadius: "50%",
+              background: "#ef4444",
+              boxShadow: "0 0 20px rgba(239,68,68,.9)",
+            }}
+          >
+            <div
+              className="risk-pulse"
+              style={{
+                inset: 0,
+                border: "2px solid #ef4444",
+              }}
+            />
+          </div>
+
+          {/* IT BAND */}
+          <div
+            style={{
+              position: "absolute",
+              left: "48%",
+              top: "52%",
+              width: 14,
+              height: 14,
+              borderRadius: "50%",
+              background: "#f59e0b",
+              boxShadow: "0 0 15px rgba(245,158,11,.8)",
+            }}
+          >
+            <div
+              className="risk-pulse"
+              style={{
+                inset: 0,
+                border: "2px solid #f59e0b",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* RIGHT PANEL */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          {/* PRIMARY RISK */}
+          <div
+            style={{
+              background: "#2b0f13",
+              border: "1px solid #ef4444",
+              borderRadius: 20,
+              padding: 24,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 60,
+                fontWeight: 800,
+                color: "#ef4444",
+                lineHeight: 1,
+              }}
+            >
+              {primaryRisk}%
+            </div>
+
+            <div
+              style={{
+                color: "#fff",
+                fontSize: 24,
+                fontWeight: 700,
+                marginTop: 8,
+              }}
+            >
+              Runner's Knee
+            </div>
+
+            <div
+              style={{
+                color: "#fca5a5",
+                marginTop: 8,
+              }}
+            >
+              ความเสี่ยงสูง
+            </div>
+          </div>
+
+          {/* CONFIDENCE */}
+          <div
+            style={{
+              background: "#0f172a",
+              borderRadius: 16,
+              padding: 18,
+            }}
+          >
+            <div style={{ color: "#94a3b8" }}>
+              Confidence
+            </div>
+
+            <div
+              style={{
+                fontSize: 32,
+                color: "#00e5ff",
+                fontWeight: 700,
+                marginTop: 6,
+              }}
+            >
+              89%
+            </div>
+          </div>
+
+          {/* BREAKDOWN */}
+          <div
+            style={{
+              background: "#0f172a",
+              borderRadius: 16,
+              padding: 18,
+            }}
+          >
+            <div
+              style={{
+                color: "#fff",
+                fontWeight: 700,
+                marginBottom: 16,
+              }}
+            >
+              Injury Breakdown
+            </div>
+
+            {[
+              {
+                label: "Runner's Knee",
+                value: risks.runnersKnee,
+              },
+              {
+                label: "IT Band Syndrome",
+                value: risks.itBand,
+              },
+              {
+                label: "Achilles Tendon",
+                value: risks.achilles,
+              },
+              {
+                label: "Shin Splints",
+                value: risks.shinSplints,
+              },
+            ].map((item) => (
+              <div
+                key={item.label}
+                style={{ marginBottom: 14 }}
+              >
+                <div
+                  style={{
+                    color: "#fff",
+                    marginBottom: 6,
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>{item.label}</span>
+                  <span>{item.value}%</span>
+                </div>
+
+                <div
+                  style={{
+                    height: 8,
+                    background: "#1e293b",
+                    borderRadius: 999,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${item.value}%`,
+                      height: "100%",
+                      background: getRiskColor(item.value),
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+
+            {/* LEGEND */}
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                marginTop: 16,
+                flexWrap: "wrap",
+              }}
+            >
+              <Legend
+                color="#10b981"
+                label="เสี่ยงต่ำ (<40%)"
+              />
+              <Legend
+                color="#f59e0b"
+                label="เสี่ยงปานกลาง (40-70%)"
+              />
+              <Legend
+                color="#ef4444"
+                label="วิกฤต (>70%)"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Legend({
+  color,
+  label,
+}: {
+  color: string;
+  label: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 5,
+        fontSize: 10,
+        color: "#94a3b8",
+      }}
+    >
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: color,
+        }}
+      />
+      {label}
     </div>
   );
 }
@@ -781,9 +1051,9 @@ export default function RunLabPremiumSystem() {
   const [isMobile, setIsMobile] = useState(false);
   const { user, isLoaded } = useUser();
 
-  
-console.log("LOADED =", isLoaded);
-console.log("USER =", user);
+
+  console.log("LOADED =", isLoaded);
+  console.log("USER =", user);
   useEffect(() => {
     console.log("USER =", user);
 
@@ -835,42 +1105,53 @@ console.log("USER =", user);
 
   const framesCount = useRef<number>(0);
   const maxLockedKnee =
-  useRef<number>(0);
+    useRef<number>(0);
   const maxLockedDrop = useRef<number>(3);
   const maxLockedOverstride = useRef<number>(8.5);
 
   const contactOverstride = useRef<number>(0);
-const lastAnkleY = useRef<number | null>(null);
-const contactDetected = useRef(false);
-const [postureMetrics, setPostureMetrics] = useState({
-  shoulderAsymmetry: 0,
-  pelvicAsymmetry: 0,
-  kneeValgus: 0,
-  footWidth: 0,
+  const lastAnkleY = useRef<number | null>(null);
+  const contactDetected = useRef(false);
+  const [postureMetrics, setPostureMetrics] = useState({
+    shoulderAsymmetry: 0,
+    pelvicAsymmetry: 0,
+    kneeValgus: 0,
+    footWidth: 0,
 
-  neckAngle: 0,
-  forwardHeadScore: 0,
+    neckAngle: 0,
+    forwardHeadScore: 0,
 
-  roundedShoulder: 0,
-  upperCross: 0,
-  lowerCross: 0,
-});
-
+    roundedShoulder: 0,
+    upperCross: 0,
+    lowerCross: 0,
+  });
+  const [poseLandmarks, setPoseLandmarks] =
+    useState({
+      front: [],
+      left: [],
+      right: [],
+      back: [],
+    });
   const [postureAnalyzed, setPostureAnalyzed] = useState(false);
   const [videoURL, setVideoURL] = useState("");
   const [postureImages, setPostureImages] =
-  useState({
-    front: "",
-    left: "",
-    right: "",
-    back: "",
-  });
-
+    useState({
+      front: "",
+      left: "",
+      right: "",
+      back: "",
+    });
+  useEffect(() => {
+    console.log(
+      "POSTURE IMAGES",
+      postureImages
+    );
+  }, [postureImages]);
   // DEMO INITIAL STATE
   const [officeRisk, setOfficeRisk] = useState(0);
   const [officeLevel, setOfficeLevel] = useState<
-  "LOW" | "MEDIUM" | "HIGH"
->("LOW");
+    "LOW" | "MEDIUM" | "HIGH"
+  >("LOW");
   const [stableScore, setStableScore] = useState<number>(89);
   const [stableRiskLevel, setStableRiskLevel] = useState<string>("MEDIUM");
   const [aiReport, setAiReport] = useState({
@@ -920,15 +1201,17 @@ const [postureMetrics, setPostureMetrics] = useState({
     await ensureScripts();
 
     const Pose = (window as any).Pose;
-console.log("Pose Exists", !!Pose);
+    console.log("Pose Exists", !!Pose);
 
-if (!Pose) {
-  console.error("Pose not loaded");
-  return null;
-}
+    if (!Pose) {
+      console.error("Pose not loaded");
+      return null;
+    }
     return new Promise<any>((resolve) => {
 
       const img = new window.Image();
+
+      img.crossOrigin = "anonymous";
 
       img.src = imageSrc;
       img.onerror = () => {
@@ -956,289 +1239,303 @@ if (!Pose) {
 
             setCapturedImage(image);
           }
+          console.log(
+            "POSE RESULTS",
+            results
+          );
+
+          console.log(
+            "POSE LANDMARKS",
+            results.poseLandmarks
+          );
+
           resolve({
-  landmarks:
-    results.poseLandmarks || [],
-});
+            landmarks:
+              results.poseLandmarks || [],
+          });
 
         });
 
         try {
-  await pose.send({ image: img });
-} catch (e) {
-  console.error("POSE ERROR", e);
-  resolve(null);
-}
+          await pose.send({ image: img });
+        } catch (e) {
+          console.error("POSE ERROR", e);
+          resolve(null);
+        }
       };
     });
   };
   const processStaticPosture = async () => {
-  let frontLandmarks = [];
-  let leftLandmarks = [];
-  let rightLandmarks = [];
-  let backLandmarks = [];
+    let frontLandmarks = [];
+    let leftLandmarks = [];
+    let rightLandmarks = [];
+    let backLandmarks = [];
 
-  let shoulderAsymmetry = 0;
-  let pelvicAsymmetry = 0;
-  let kneeValgus = 0;
-  let footWidth = 0;
+    let shoulderAsymmetry = 0;
+    let pelvicAsymmetry = 0;
+    let kneeValgus = 0;
+    let footWidth = 0;
 
-  let cva = 50;
-  let forwardHeadScore = 0;
-  let roundedShoulder = 0;
-  let upperCross = 0;
-  let lowerCross = 0;
-  let officeResult = {
-  risk: 0,
-  level: "LOW",
-};
+    let cva = 50;
+    let forwardHeadScore = 0;
+    let roundedShoulder = 0;
+    let upperCross = 0;
+    let lowerCross = 0;
+    let officeResult = {
+      risk: 0,
+      level: "LOW",
+    };
     if (
-  !postureImages.front ||
-  !postureImages.left ||
-  !postureImages.right ||
-  !postureImages.back
-) {
-  alert("กรุณาอัปโหลดรูปทั้ง 4 ด้าน");
-  return;
-}
+      !postureImages.front ||
+      !postureImages.left ||
+      !postureImages.right ||
+      !postureImages.back
+    ) {
+      alert("กรุณาอัปโหลดรูปทั้ง 4 ด้าน");
+      return;
+    }
 
     try {
- 
 
 
 
-const frontData =
- await analyzeImage(postureImages.front)
 
-const leftData =
- await analyzeImage(postureImages.left)
+      const frontData =
+        await analyzeImage(postureImages.front)
 
-const rightData =
- await analyzeImage(postureImages.right)
+      const leftData =
+        await analyzeImage(postureImages.left)
 
-const backData =
- await analyzeImage(postureImages.back)
+      const rightData =
+        await analyzeImage(postureImages.right)
 
- console.log("FRONT", frontData);
-console.log("LEFT", leftData);
-console.log("RIGHT", rightData);
-console.log("BACK", backData);
+      const backData =
+        await analyzeImage(postureImages.back)
 
-frontLandmarks =
-  frontData?.landmarks || [];
+      console.log("FRONT", frontData);
+      console.log("LEFT", leftData);
+      console.log("RIGHT", rightData);
+      console.log("BACK", backData);
 
-leftLandmarks =
-  leftData?.landmarks || [];
+      frontLandmarks =
+        frontData?.landmarks || [];
 
-rightLandmarks =
-  rightData?.landmarks || [];
+      leftLandmarks =
+        leftData?.landmarks || [];
 
-backLandmarks =
-  backData?.landmarks || [];
-  console.log(
-  "Front Count",
-  frontLandmarks?.length
-);
+      rightLandmarks =
+        rightData?.landmarks || [];
 
-console.log(
-  "Back Count",
-  backLandmarks?.length
-);
+      backLandmarks =
+        backData?.landmarks || [];
 
-console.log(
-  "Left Count",
-  leftLandmarks?.length
-);
 
-console.log(
-  "Right Count",
-  rightLandmarks?.length
-);
-   console.log("frontLandmarks =", frontLandmarks);
-console.log("length =", frontLandmarks?.length);
-console.log("11 =", frontLandmarks?.[11]);
-console.log("12 =", frontLandmarks?.[12]);
-     
-// Shoulder Asymmetry
-
-let frontShoulder = 0;
-
-if (
-  frontLandmarks &&
-  frontLandmarks.length > 12 &&
-  frontLandmarks[11] &&
-  frontLandmarks[12]
-) {
-  frontShoulder =
-    Math.abs(
-      frontLandmarks[11].y -
-      frontLandmarks[12].y
-    ) * 100;
-} else {
-  console.log(
-    "Front landmarks missing",
-    frontLandmarks
-  );
-}
-let backShoulder = 0;
-
-if (
-  backLandmarks &&
-  backLandmarks.length > 12 &&
-  backLandmarks[11] &&
-  backLandmarks[12]
-) {
-  backShoulder =
-    Math.abs(
-      backLandmarks[11].y -
-      backLandmarks[12].y
-    ) * 100;
-}
-
-shoulderAsymmetry =
-  (frontShoulder + backShoulder) / 2;
-      
-  // Pelvic Asymmetry
-      if (
-  backLandmarks &&
-  backLandmarks.length > 24 &&
-  backLandmarks[23] &&
-  backLandmarks[24]
-) {
-  pelvicAsymmetry =
-    Math.abs(
-      backLandmarks[23].y -
-      backLandmarks[24].y
-    ) * 100;
-}
-
-   // CVA
-   const sideLandmarks =
-  leftLandmarks &&
-  rightLandmarks
-    ? (
-        leftLandmarks[7]?.visibility >
-        rightLandmarks[7]?.visibility
-      )
-        ? leftLandmarks
-        : rightLandmarks
-    : leftLandmarks || rightLandmarks;
-if (
-  sideLandmarks &&
-  sideLandmarks.length > 12 &&
-  sideLandmarks[7] &&
-  sideLandmarks[8] &&
-  sideLandmarks[11] &&
-  sideLandmarks[12]
-) {
-
-  const ear =
-    sideLandmarks[7].visibility >
-    sideLandmarks[8].visibility
-      ? sideLandmarks[7]
-      : sideLandmarks[8];
-      
-
-  const shoulder =
-    sideLandmarks[11].visibility >
-    sideLandmarks[12].visibility
-      ? sideLandmarks[11]
-      : sideLandmarks[12];
-
-  cva = calcCVA(
-    ear,
-    shoulder
-  );
-  roundedShoulder =
-  Math.abs(
-    shoulder.x - ear.x
-  ) * 100;
-
-}
-
-forwardHeadScore =
-  cva >= 50
-    ? 0
-    : Math.min(
-        100,
-        Math.round(
-          (50 - cva) * 5
-        )
+      setPoseLandmarks({
+        front: frontLandmarks,
+        left: leftLandmarks,
+        right: rightLandmarks,
+        back: backLandmarks,
+      });
+      console.log(
+        "Back Count",
+        backLandmarks?.length
       );
+
+      console.log(
+        "Left Count",
+        leftLandmarks?.length
+      );
+
+      console.log(
+        "Right Count",
+        rightLandmarks?.length
+      );
+      console.log("frontLandmarks =", frontLandmarks);
+      console.log("length =", frontLandmarks?.length);
+      console.log("11 =", frontLandmarks?.[11]);
+      console.log("12 =", frontLandmarks?.[12]);
+
+
+      // Shoulder Asymmetry
+
+      let frontShoulder = 0;
+
+      if (
+        frontLandmarks &&
+        frontLandmarks.length > 12 &&
+        frontLandmarks[11] &&
+        frontLandmarks[12]
+      ) {
+        frontShoulder =
+          Math.abs(
+            frontLandmarks[11].y -
+            frontLandmarks[12].y
+          ) * 100;
+      } else {
+        console.log(
+          "Front landmarks missing",
+          frontLandmarks
+        );
+      }
+      let backShoulder = 0;
+
+      if (
+        backLandmarks &&
+        backLandmarks.length > 12 &&
+        backLandmarks[11] &&
+        backLandmarks[12]
+      ) {
+        backShoulder =
+          Math.abs(
+            backLandmarks[11].y -
+            backLandmarks[12].y
+          ) * 100;
+      }
+
+      shoulderAsymmetry =
+        (frontShoulder + backShoulder) / 2;
+
+      // Pelvic Asymmetry
+      if (
+        backLandmarks &&
+        backLandmarks.length > 24 &&
+        backLandmarks[23] &&
+        backLandmarks[24]
+      ) {
+        pelvicAsymmetry =
+          Math.abs(
+            backLandmarks[23].y -
+            backLandmarks[24].y
+          ) * 100;
+      }
+
+      // CVA
+      const sideLandmarks =
+        leftLandmarks &&
+          rightLandmarks
+          ? (
+            leftLandmarks[7]?.visibility >
+            rightLandmarks[7]?.visibility
+          )
+            ? leftLandmarks
+            : rightLandmarks
+          : leftLandmarks || rightLandmarks;
+      if (
+        sideLandmarks &&
+        sideLandmarks.length > 12 &&
+        sideLandmarks[7] &&
+        sideLandmarks[8] &&
+        sideLandmarks[11] &&
+        sideLandmarks[12]
+      ) {
+
+        const ear =
+          sideLandmarks[7].visibility >
+            sideLandmarks[8].visibility
+            ? sideLandmarks[7]
+            : sideLandmarks[8];
+
+
+        const shoulder =
+          sideLandmarks[11].visibility >
+            sideLandmarks[12].visibility
+            ? sideLandmarks[11]
+            : sideLandmarks[12];
+
+        cva = calcCVA(
+          ear,
+          shoulder
+        );
+        roundedShoulder =
+          Math.abs(
+            shoulder.x - ear.x
+          ) * 100;
+
+      }
+
+      forwardHeadScore =
+        cva >= 50
+          ? 0
+          : Math.min(
+            100,
+            Math.round(
+              (50 - cva) * 5
+            )
+          );
 
 
       // Knee Valgus
-     if (
-  frontLandmarks &&
-  frontLandmarks.length > 27 &&
-  frontLandmarks[23] &&
-  frontLandmarks[25] &&
-  frontLandmarks[27]
-) {
-  kneeValgus =
-    Math.abs(
-      calcAngle(
-        frontLandmarks[23],
-        frontLandmarks[25],
+      if (
+        frontLandmarks &&
+        frontLandmarks.length > 27 &&
+        frontLandmarks[23] &&
+        frontLandmarks[25] &&
         frontLandmarks[27]
-      ) - 180
-    ) / 2;
-}
+      ) {
+        kneeValgus =
+          Math.abs(
+            calcAngle(
+              frontLandmarks[23],
+              frontLandmarks[25],
+              frontLandmarks[27]
+            ) - 180
+          ) / 2;
+      }
       // Foot Width
-if (
-  backLandmarks &&
-  backLandmarks.length > 32 &&
-  backLandmarks[31] &&
-  backLandmarks[32]
-) {
-  footWidth =
-    Math.abs(
-      backLandmarks[31].x -
-      backLandmarks[32].x
-    ) * 100;
-}
+      if (
+        backLandmarks &&
+        backLandmarks.length > 32 &&
+        backLandmarks[31] &&
+        backLandmarks[32]
+      ) {
+        footWidth =
+          Math.abs(
+            backLandmarks[31].x -
+            backLandmarks[32].x
+          ) * 100;
+      }
 
-const roundedShoulderRisk =
-  roundedShoulder > 12
-    ? 100
-    : roundedShoulder > 5
-    ? 60
-    : roundedShoulder > 2
-    ? 30
-    : 0;
+      const roundedShoulderRisk =
+        roundedShoulder > 12
+          ? 100
+          : roundedShoulder > 5
+            ? 60
+            : roundedShoulder > 2
+              ? 30
+              : 0;
 
-upperCross = Math.round(
-  forwardHeadScore * 0.6 +
-  roundedShoulderRisk * 0.4
-);
+      upperCross = Math.round(
+        forwardHeadScore * 0.6 +
+        roundedShoulderRisk * 0.4
+      );
 
-lowerCross = Math.round(
-  (pelvicAsymmetry * 10) * 0.5 +
-  (stableHipDrop || 0) * 0.5
-);
+      lowerCross = Math.round(
+        (pelvicAsymmetry * 10) * 0.5 +
+        (stableHipDrop || 0) * 0.5
+      );
 
-setPostureMetrics({
-  shoulderAsymmetry,
-  pelvicAsymmetry,
-  kneeValgus,
-  footWidth,
+      setPostureMetrics({
+        shoulderAsymmetry,
+        pelvicAsymmetry,
+        kneeValgus,
+        footWidth,
 
-  neckAngle: cva,
-  forwardHeadScore,
+        neckAngle: cva,
+        forwardHeadScore,
 
-  roundedShoulder,
-  upperCross,
-  lowerCross,
-});
-officeResult =
-  calculateOfficeRisk(
-    cva,
-    roundedShoulder,
-    upperCross,
-    lowerCross,
-    shoulderAsymmetry,
-    pelvicAsymmetry
-  );
+        roundedShoulder,
+        upperCross,
+        lowerCross,
+      });
+      officeResult =
+        calculateOfficeRisk(
+          cva,
+          roundedShoulder,
+          upperCross,
+          lowerCross,
+          shoulderAsymmetry,
+          pelvicAsymmetry
+        );
 
       setOfficeRisk(
         officeResult.risk
@@ -1255,103 +1552,11 @@ officeResult =
       console.error(err);
 
     }
-   const newReportData = {
-  ...(reportData || {}),
-
-  landmarks: {
-    front: reportData?.landmarks?.front,
-left: reportData?.landmarks?.left,
-right: reportData?.landmarks?.right,
-back: reportData?.landmarks?.back,
-  },
-
-  assessmentImages: {
-    front: postureImages.front,
-    left: postureImages.left,
-    right: postureImages.right,
-    back: postureImages.back,
-  },
-
-  officeSyndrome: {
-    risk: officeResult.risk,
-    level: officeResult.level,
-
-    neckAngle: cva,
-    forwardHeadScore,
-
-    roundedShoulder,
-    upperCross,
-    lowerCross,
-
-    shoulderAsymmetry,
-    pelvicAsymmetry,
-
-    findings: [
-      forwardHeadScore > 20
-        ? "Forward Head Posture"
-        : null,
-
-      roundedShoulder > 2
-        ? "Rounded Shoulder"
-        : null,
-
-      upperCross > 20
-        ? "Upper Cross Syndrome"
-        : null,
-
-      lowerCross > 40
-        ? "Lower Cross Syndrome"
-        : null,
-
-      shoulderAsymmetry > 5
-        ? "Shoulder Imbalance"
-        : null,
-
-      pelvicAsymmetry > 5
-        ? "Pelvic Asymmetry"
-        : null,
-    ].filter(Boolean),
-
-    recommendations: [
-      forwardHeadScore > 20
-        ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-        : null,
-
-      forwardHeadScore > 20
-        ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-        : null,
-
-      roundedShoulder > 2
-        ? "Doorway Stretch 3 เซ็ต x 30 วินาที"
-        : null,
-
-      roundedShoulder > 2
-        ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-        : null,
-
-      upperCross > 20
-        ? "Deep Neck Flexor Training"
-        : null,
-
-      lowerCross > 40
-        ? "Hip Flexor Stretch"
-        : null,
-
-      pelvicAsymmetry > 5
-        ? "Hip Bridge 3 เซ็ต x 15 ครั้ง"
-        : null,
-
-      pelvicAsymmetry > 5
-        ? "Clamshell 3 เซ็ต x 12 ครั้ง"
-        : null,
-    ].filter(Boolean),
-  },
-};
 
 
 
 
-  
+
   };
 
 
@@ -1392,73 +1597,73 @@ back: reportData?.landmarks?.back,
 
         const currentKnee = calcAngle(lm[24], lm[26], lm[28]);
         const currentDropRaw = Math.abs(lm[23].y - lm[24].y) * 180;
-        
-  const ankleY = lm[28].y;
+
+        const ankleY = lm[28].y;
         if (lastAnkleY.current !== null) {
 
-  const descending =
-    ankleY > lastAnkleY.current;
+          const descending =
+            ankleY > lastAnkleY.current;
 
-  const nearGround =
-    ankleY > 0.85;
+          const nearGround =
+            ankleY > 0.85;
 
-  if (
-    descending &&
-    nearGround &&
-    !contactDetected.current
-  ) {
+          if (
+            descending &&
+            nearGround &&
+            !contactDetected.current
+          ) {
 
-    const comX =
-(
-  lm[11].x +
-  lm[12].x +
-  lm[23].x +
-  lm[24].x
-) / 4;
+            const comX =
+              (
+                lm[11].x +
+                lm[12].x +
+                lm[23].x +
+                lm[24].x
+              ) / 4;
 
-contactOverstride.current =
-  Math.abs(
-    lm[28].x - comX
-  ) * 100;
+            contactOverstride.current =
+              Math.abs(
+                lm[28].x - comX
+              ) * 100;
 
 
-    contactDetected.current = true;
-  }
+            contactDetected.current = true;
+          }
 
-  if (ankleY < 0.75) {
-    contactDetected.current = false;
-  }
-}
+          if (ankleY < 0.75) {
+            contactDetected.current = false;
+          }
+        }
 
-lastAnkleY.current = ankleY;
+        lastAnkleY.current = ankleY;
 
-       
-         
+
+
 
         const finalKneeAngle = maxLockedKnee.current;
         const finalPelvicDrop = maxLockedDrop.current;
-       const finalOverstride =contactOverstride.current;
+        const finalOverstride = contactOverstride.current;
 
         const kneeDiff = 160 - finalKneeAngle;
         const calcKneeRisk = Math.min(95, Math.max(15, (kneeDiff > 0 ? kneeDiff * 2.8 : 15) + (postureMetrics.kneeValgus * 2.2)));
         const calcItbRisk = Math.min(95, Math.max(12, (finalPelvicDrop * 8) + (postureMetrics.pelvicAsymmetry * 2.5)));
         const baseOverstrideRisk = finalOverstride > 10 ? (finalOverstride - 10) * 6 : 5;
         const calcAchillesRisk =
-  Math.min(
-    95,
-    Math.max(
-      10,
-      baseOverstrideRisk
-    )
-  );
+          Math.min(
+            95,
+            Math.max(
+              10,
+              baseOverstrideRisk
+            )
+          );
         const calcShinRisk =
-  Math.min(
-    95,
-    Math.max(
-      10,
-      baseOverstrideRisk * 1.2
-    )
-  );
+          Math.min(
+            95,
+            Math.max(
+              10,
+              baseOverstrideRisk * 1.2
+            )
+          );
 
         const computedRisks = {
           runnersKnee: Math.round(calcKneeRisk),
@@ -1466,70 +1671,70 @@ lastAnkleY.current = ankleY;
           itBand: Math.round(calcItbRisk),
           shinSplints: Math.round(calcShinRisk),
         };
-      const maxRiskValue = Math.max(
-  computedRisks.runnersKnee,
-  computedRisks.achilles,
-  computedRisks.itBand,
-  computedRisks.shinSplints
-);
+        const maxRiskValue = Math.max(
+          computedRisks.runnersKnee,
+          computedRisks.achilles,
+          computedRisks.itBand,
+          computedRisks.shinSplints
+        );
 
-const coreScore = Math.min(
-  98,
-  Math.max(40, 100 - (maxRiskValue * 0.4))
-);
+        const coreScore = Math.min(
+          98,
+          Math.max(40, 100 - (maxRiskValue * 0.4))
+        );
 
-if (framesCount.current % 15 === 0) {
+        if (framesCount.current % 15 === 0) {
 
-  setInjuryRisks(computedRisks);
+          setInjuryRisks(computedRisks);
 
-  setStableScore(
-    Math.round(coreScore)
-  );
+          setStableScore(
+            Math.round(coreScore)
+          );
 
-  setStableKneeAngle(
-    finalKneeAngle
-  );
+          setStableKneeAngle(
+            finalKneeAngle
+          );
 
-  setStableHipDrop(
-    Math.round(finalPelvicDrop)
-  );
+          setStableHipDrop(
+            Math.round(finalPelvicDrop)
+          );
 
-}
- const newSubMetrics = {
-  eff: Math.round(coreScore),
-  hip: Math.round(Math.max(30, 100 - (finalPelvicDrop * 8) - postureMetrics.pelvicAsymmetry)),
-  knee: Math.round(Math.max(30, 100 - (kneeDiff * 2) - postureMetrics.kneeValgus)),
-  mob: Math.round(Math.min(100, Math.max(45, 100 - (calcAchillesRisk * 0.3)))),
-  bal: Math.round(Math.max(40, 100 - (finalPelvicDrop * 5) - postureMetrics.shoulderAsymmetry))
-};
+        }
+        const newSubMetrics = {
+          eff: Math.round(coreScore),
+          hip: Math.round(Math.max(30, 100 - (finalPelvicDrop * 8) - postureMetrics.pelvicAsymmetry)),
+          knee: Math.round(Math.max(30, 100 - (kneeDiff * 2) - postureMetrics.kneeValgus)),
+          mob: Math.round(Math.min(100, Math.max(45, 100 - (calcAchillesRisk * 0.3)))),
+          bal: Math.round(Math.max(40, 100 - (finalPelvicDrop * 5) - postureMetrics.shoulderAsymmetry))
+        };
 
-const overallScore = Math.round(
-  (
-    newSubMetrics.eff +
-    newSubMetrics.hip +
-    newSubMetrics.knee +
-    newSubMetrics.mob +
-    newSubMetrics.bal
-  ) / 5
-);
+        const overallScore = Math.round(
+          (
+            newSubMetrics.eff +
+            newSubMetrics.hip +
+            newSubMetrics.knee +
+            newSubMetrics.mob +
+            newSubMetrics.bal
+          ) / 5
+        );
 
-if (framesCount.current % 15 === 0) {
+        if (framesCount.current % 15 === 0) {
 
-  setInjuryRisks(computedRisks);
+          setInjuryRisks(computedRisks);
 
-  setStableScore(overallScore);
+          setStableScore(overallScore);
 
-  setStableKneeAngle(finalKneeAngle);
+          setStableKneeAngle(finalKneeAngle);
 
-  setStableHipDrop(
-    Math.round(finalPelvicDrop)
-  );
+          setStableHipDrop(
+            Math.round(finalPelvicDrop)
+          );
 
-  setSubMetrics(newSubMetrics);
+          setSubMetrics(newSubMetrics);
 
-}
+        }
 
-       
+
         const sortedRisks = Object.entries(computedRisks).sort((a, b) => b[1] - a[1]);
         const peakInjuryName = sortedRisks[0][0];
         const peakInjuryScore = sortedRisks[0][1];
@@ -1634,11 +1839,11 @@ if (framesCount.current % 15 === 0) {
       dynamicAnalysis: {
         kneeAngle: stableKneeAngle || 0,
         hipDrop: stableHipDrop || 0,
-        overstrideEstimate:contactOverstride.current,
+        overstrideEstimate: contactOverstride.current,
         score: stableScore,
       },
 
-   
+
 
       injuryRisk: {
         runnersKnee: injuryRisks.runnersKnee,
@@ -1646,34 +1851,34 @@ if (framesCount.current % 15 === 0) {
         itBand: injuryRisks.itBand,
         shinSplints: injuryRisks.shinSplints,
       },
- officeSyndrome: {
-    risk: officeRisk,
-    level: officeLevel,
+      officeSyndrome: {
+        risk: officeRisk,
+        level: officeLevel,
 
-    neckAngle: postureMetrics.neckAngle || 0,
+        neckAngle: postureMetrics.neckAngle || 0,
 
-    forwardHeadScore:
-      postureMetrics.forwardHeadScore || 0,
+        forwardHeadScore:
+          postureMetrics.forwardHeadScore || 0,
 
-    roundedShoulder:
-      postureMetrics.roundedShoulder || 0,
+        roundedShoulder:
+          postureMetrics.roundedShoulder || 0,
 
-    upperCross:
-      postureMetrics.upperCross || 0,
+        upperCross:
+          postureMetrics.upperCross || 0,
 
-    lowerCross:
-      postureMetrics.lowerCross || 0,
+        lowerCross:
+          postureMetrics.lowerCross || 0,
 
-    shoulderAsymmetry:
-      postureMetrics.shoulderAsymmetry || 0,
+        shoulderAsymmetry:
+          postureMetrics.shoulderAsymmetry || 0,
 
-    pelvicAsymmetry:
-      postureMetrics.pelvicAsymmetry || 0,
+        pelvicAsymmetry:
+          postureMetrics.pelvicAsymmetry || 0,
 
-    findings: [],
+        findings: [],
 
-    recommendations: [],
-  },
+        recommendations: [],
+      },
       summary: {
         score: stableScore,
         riskLevel: stableRiskLevel,
@@ -1714,9 +1919,9 @@ if (framesCount.current % 15 === 0) {
       exercises.push("A Skip");
     }
     const confidence = Math.min(
-  95,
-  60 + rootCauses.length * 10
-);
+      95,
+      60 + rootCauses.length * 10
+    );
     if (postureMetrics.footWidth > 5) {
       rootCauses.push("Foot Control Deficit");
       exercises.push("Single Leg Balance");
@@ -1760,10 +1965,10 @@ if (framesCount.current % 15 === 0) {
       advice,
     };
 
-    
+
     console.log("REPORT SAVED");
     console.log(finalReport);
- const executiveSummary = `
+    const executiveSummary = `
 Movement Score : ${stableScore}/100
 
 ความเสี่ยงหลัก :
@@ -1777,7 +1982,7 @@ ${primaryRisk.name} (${primaryRisk.value}%)
 
 สรุป :
 แนะนำให้ปรับรูปแบบการเคลื่อนไหวและเสริมสร้างความแข็งแรงเฉพาะจุดเพื่อลดความเสี่ยงการบาดเจ็บในอนาคต
-`; 
+`;
 
     setConfidenceScore(confidence);
 
@@ -1787,7 +1992,7 @@ ${primaryRisk.name} (${primaryRisk.value}%)
       recommendation: [...new Set(exercises)].join(" • "),
       runningAdvice: advice.join(" • "),
     });
-const analysisSummary = `
+    const analysisSummary = `
 Movement Score ${stableScore}/100
 
 Primary Risk: ${primaryRisk.name}
@@ -1799,154 +2004,182 @@ Hip Drop: ${stableHipDrop}
 Knee Valgus: ${postureMetrics.kneeValgus}
 
 Neck Angle (CVA): ${Math.round(
-  postureMetrics.neckAngle || 0
-)}°
+      postureMetrics.neckAngle || 0
+    )}°
 `;
 
-console.log("VALUES", {
-  neckAngle: postureMetrics.neckAngle,
-  forwardHeadScore:
-    postureMetrics.forwardHeadScore,
-  roundedShoulder:
-    postureMetrics.roundedShoulder,
-  upperCross:
-    postureMetrics.upperCross,
-});
+    console.log("VALUES", {
+      neckAngle: postureMetrics.neckAngle,
+      forwardHeadScore:
+        postureMetrics.forwardHeadScore,
+      roundedShoulder:
+        postureMetrics.roundedShoulder,
+      upperCross:
+        postureMetrics.upperCross,
+    });
 
-console.log("POSTURE METRICS", postureMetrics);
+    console.log("POSTURE METRICS", postureMetrics);
+    console.log(
+      "POSTURE IMAGES",
+      postureImages
+    );
+    console.log("POSE LANDMARKS", poseLandmarks);
+    console.log("POSE LANDMARKS STATE", poseLandmarks);
     const reportData = {
-  executiveSummary,
-  injuryRisks,
-  analysisSummary,
+      executiveSummary,
+      injuryRisks,
+      analysisSummary,
 
-  rootCause: rootCauses,
-  recommendation: [...new Set(exercises)],
-  runningAdvice: advice,
-  
-  officeRisk,
-  officeLevel,
-  
- officeSyndrome: {
-  risk: officeRisk,
-  level: officeLevel,
+      assessmentImages: {
+        front: postureImages.front,
+        left: postureImages.left,
+        right: postureImages.right,
+        back: postureImages.back,
+      },
+      landmarks: {
+        front: poseLandmarks.front,
+        left: poseLandmarks.left,
+        right: poseLandmarks.right,
+        back: poseLandmarks.back,
+      },
 
-  neckAngle: postureMetrics.neckAngle || 0,
+      rootCause: rootCauses,
+      recommendation: [...new Set(exercises)],
+      runningAdvice: advice,
 
-  forwardHeadScore:
-    postureMetrics.forwardHeadScore || 0,
+      officeRisk,
+      officeLevel,
 
-  roundedShoulder:
-    postureMetrics.roundedShoulder || 0,
+      officeSyndrome: {
+        risk: officeRisk,
+        level: officeLevel,
 
-  upperCross:
-    postureMetrics.upperCross || 0,
+        neckAngle: postureMetrics.neckAngle || 0,
 
-  lowerCross:
-    postureMetrics.lowerCross || 0,
+        forwardHeadScore:
+          postureMetrics.forwardHeadScore || 0,
 
-  shoulderAsymmetry:
-    postureMetrics.shoulderAsymmetry || 0,
+        roundedShoulder:
+          postureMetrics.roundedShoulder || 0,
 
-  pelvicAsymmetry:
-    postureMetrics.pelvicAsymmetry || 0,
+        upperCross:
+          postureMetrics.upperCross || 0,
 
-  findings: [
-    (postureMetrics.forwardHeadScore || 0) > 20
-      ? "Forward Head Posture"
-      : null,
+        lowerCross:
+          postureMetrics.lowerCross || 0,
 
-    (postureMetrics.roundedShoulder || 0) > 2
-      ? "Rounded Shoulder"
-      : null,
+        shoulderAsymmetry:
+          postureMetrics.shoulderAsymmetry || 0,
 
-    (postureMetrics.upperCross || 0) > 20
-      ? "Upper Cross Syndrome"
-      : null,
+        pelvicAsymmetry:
+          postureMetrics.pelvicAsymmetry || 0,
 
-    (postureMetrics.lowerCross || 0) > 20
-      ? "Lower Cross Syndrome"
-      : null,
+        findings: [
+          (postureMetrics.forwardHeadScore || 0) > 20
+            ? "Forward Head Posture"
+            : null,
 
-    (postureMetrics.shoulderAsymmetry || 0) > 5
-      ? "Shoulder Imbalance"
-      : null,
+          (postureMetrics.roundedShoulder || 0) > 2
+            ? "Rounded Shoulder"
+            : null,
 
-    (postureMetrics.pelvicAsymmetry || 0) > 5
-      ? "Pelvic Asymmetry"
-      : null,
-  ].filter(Boolean),
+          (postureMetrics.upperCross || 0) > 20
+            ? "Upper Cross Syndrome"
+            : null,
 
-  recommendations: [
-    (postureMetrics.forwardHeadScore || 0) > 20
-      ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-      : null,
+          (postureMetrics.lowerCross || 0) > 20
+            ? "Lower Cross Syndrome"
+            : null,
 
-    (postureMetrics.forwardHeadScore || 0) > 20
-      ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-      : null,
+          (postureMetrics.shoulderAsymmetry || 0) > 5
+            ? "Shoulder Imbalance"
+            : null,
 
-    (postureMetrics.roundedShoulder || 0) > 2
-      ? "Doorway Stretch 3 เซ็ต x 30 วินาที"
-      : null,
+          (postureMetrics.pelvicAsymmetry || 0) > 5
+            ? "Pelvic Asymmetry"
+            : null,
+        ].filter(Boolean),
 
-    (postureMetrics.roundedShoulder || 0) > 2
-      ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-      : null,
+        recommendations: [
+          (postureMetrics.forwardHeadScore || 0) > 20
+            ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
+            : null,
 
-    (postureMetrics.upperCross || 0) > 20
-      ? "Deep Neck Flexor Training"
-      : null,
+          (postureMetrics.forwardHeadScore || 0) > 20
+            ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
+            : null,
 
-    (postureMetrics.lowerCross || 0) > 20
-      ? "Hip Flexor Stretch"
-      : null,
-  ].filter(Boolean),
-},
+          (postureMetrics.roundedShoulder || 0) > 2
+            ? "Doorway Stretch 3 เซ็ต x 30 วินาที"
+            : null,
 
-  movementScore: stableScore,
+          (postureMetrics.roundedShoulder || 0) > 2
+            ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
+            : null,
 
-  diagnosis,
-  riskLevel: stableRiskLevel,
+          (postureMetrics.upperCross || 0) > 20
+            ? "Deep Neck Flexor Training"
+            : null,
 
-  kneeAngle: stableKneeAngle,
-  hipDrop: stableHipDrop,
-  overstrideEstimate: contactOverstride.current,
+          (postureMetrics.lowerCross || 0) > 20
+            ? "Hip Flexor Stretch"
+            : null,
+        ].filter(Boolean),
+      },
 
-  cadence: "Not Available",
+      movementScore: stableScore,
 
-  kneeValgus: postureMetrics.kneeValgus,
-  pelvicAsymmetry: postureMetrics.pelvicAsymmetry,
-  neckAngle: postureMetrics.neckAngle,
-  shoulderAsymmetry: postureMetrics.shoulderAsymmetry,
-  footWidth: postureMetrics.footWidth,
-
-  createdAt: new Date().toISOString(),
-};
-console.log("STEP A");
-
-setReportData(reportData);
-
-console.log("SAVE START");
-
-const { data, error } =
-  await supabase
-    .from("reports")
-    .insert({
-      user_id: user?.id,
-      score: stableScore,
-      risk_level: stableRiskLevel,
       diagnosis,
-      report_json: reportData,
-      is_paid: false,
-    })
-    .select();
+      riskLevel: stableRiskLevel,
 
-console.log("INSERT DATA =", data);
-console.log("INSERT ERROR =", error);
+      kneeAngle: stableKneeAngle,
+      hipDrop: stableHipDrop,
+      overstrideEstimate: contactOverstride.current,
 
-if (error) {
-  alert(error.message);
-}
+      cadence: "Not Available",
+
+      kneeValgus: postureMetrics.kneeValgus,
+      pelvicAsymmetry: postureMetrics.pelvicAsymmetry,
+      neckAngle: postureMetrics.neckAngle,
+      shoulderAsymmetry: postureMetrics.shoulderAsymmetry,
+      footWidth: postureMetrics.footWidth,
+
+      createdAt: new Date().toISOString(),
+    };
+    console.log("REPORT DATA", reportData);
+    console.log(
+      "SAVE REPORT",
+      reportData.assessmentImages
+    );
+    console.log(
+      "FULL REPORT DATA",
+      reportData
+    );
+    console.log("STEP A");
+
+    setReportData(reportData);
+
+    console.log("SAVE START");
+
+    const { data, error } =
+      await supabase
+        .from("reports")
+        .insert({
+          user_id: user?.id,
+          score: stableScore,
+          risk_level: stableRiskLevel,
+          diagnosis,
+          report_json: reportData,
+          is_paid: false,
+        })
+        .select();
+
+    console.log("INSERT DATA =", data);
+    console.log("INSERT ERROR =", error);
+
+    if (error) {
+      alert(error.message);
+    }
 
   };
 
@@ -1958,7 +2191,7 @@ if (error) {
     const { jsPDF } =
       await import("jspdf");
     console.log(document.body.innerHTML.includes("report-export"));
-    
+
     const reportElement =
       document.querySelector(
         "#report-export"
@@ -2017,16 +2250,16 @@ if (error) {
       margin: "0 auto",
       padding: "0 20px",
     },
-navBtn: {
-  color: "#00E5FF",
-  textDecoration: "none",
-  fontWeight: 700,
-  fontSize: 14,
-  padding: "10px 16px",
-  borderRadius: 999,
-  background: "rgba(0,229,255,0.08)",
-  border: "1px solid rgba(0,229,255,0.15)",
-},
+    navBtn: {
+      color: "#00E5FF",
+      textDecoration: "none",
+      fontWeight: 700,
+      fontSize: 14,
+      padding: "10px 16px",
+      borderRadius: 999,
+      background: "rgba(0,229,255,0.08)",
+      border: "1px solid rgba(0,229,255,0.15)",
+    },
     sn: { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, background: "linear-gradient(135deg, #00e5ff 0%, #0066ff 100%)", color: "#030712", borderRadius: 10, fontWeight: 900, fontSize: 14, marginRight: 12, boxShadow: "0 4px 14px rgba(0,229,255,0.3)" },
     st: {
       fontSize: isMobile ? 16 : 22,
@@ -2069,93 +2302,93 @@ navBtn: {
         justifyContent: "space-between",
         gap: 10,
       }}>
-       
 
 
-     <div>Clerk Test</div>
+
+        <div>Clerk Test</div>
       </div>
 
 
       <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-<nav style={S.nav}>
-  <div
-    style={{
-      ...S.navIn,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-    }}
-  >
-
-    {/* LEFT */}
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-      }}
-    >
-      <img
-  src="/duha-icon.png"
-  width="60"
-/>
-
-      <div>
+      <nav style={S.nav}>
         <div
           style={{
-            fontWeight: 900,
-            fontSize: 22,
-            color: "#fff",
+            ...S.navIn,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          RUNLAB AI
+
+          {/* LEFT */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <img
+              src="/duha-icon.png"
+              width="60"
+            />
+
+            <div>
+              <div
+                style={{
+                  fontWeight: 900,
+                  fontSize: 22,
+                  color: "#fff",
+                }}
+              >
+                RUNLAB AI
+              </div>
+
+              <div
+                style={{
+                  fontSize: 10,
+                  color: "#00E5FF",
+                  letterSpacing: 2,
+                  fontWeight: 700,
+                }}
+              >
+                POWERED BY DUHA
+              </div>
+            </div>
+          </div>
+
+          {/* CENTER */}
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+            }}
+          >
+            <a href="/dashboard" style={S.navBtn}>
+              📊 Dashboard
+            </a>
+          </div>
+
+          {/* RIGHT */}
+          <div>
+            {!user ? (
+              <SignInButton mode="modal">
+                <button style={S.bp}>
+                  Login
+                </button>
+              </SignInButton>
+            ) : (
+              <UserButton />
+            )}
+          </div>
+
         </div>
+      </nav>
 
-        <div
-          style={{
-            fontSize: 10,
-            color: "#00E5FF",
-            letterSpacing: 2,
-            fontWeight: 700,
-          }}
-        >
-          POWERED BY DUHA
-        </div>
-      </div>
-    </div>
 
-    {/* CENTER */}
-    <div
-      style={{
-        display: "flex",
-        gap: 12,
-      }}
-    >
-      <a href="/dashboard" style={S.navBtn}>
-        📊 Dashboard
-      </a>
-    </div>
 
-    {/* RIGHT */}
-    <div>
-      {!user ? (
-        <SignInButton mode="modal">
-          <button style={S.bp}>
-            Login
-          </button>
-        </SignInButton>
-      ) : (
-        <UserButton />
-      )}
-    </div>
 
-  </div>
-</nav>
-          
-         
-
-     
 
       {/* HERO SECTION */}
       <div style={{
@@ -2254,149 +2487,210 @@ navBtn: {
       </div>
 
       {/* STEP 1: STATIC POSTURE */}
- <div
-  style={{
-    ...S.card,
-    gridColumn: "span 3",
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 14,
-    background: "#070f1e",
-  }}
->
-  <PoseSlot
-    label="รูปด้านหน้า (Front)"
-    preview={postureImages.front}
-    onFile={(f) =>
-      setPostureImages((p) => ({
-        ...p,
-        front: URL.createObjectURL(f),
-      }))
-    }
-    onClear={() =>
-      setPostureImages((p) => ({
-        ...p,
-        front: "",
-      }))
-    }
-  />
-
-  <PoseSlot
-    label="รูปด้านซ้าย (Left)"
-    preview={postureImages.left}
-    onFile={(f) =>
-      setPostureImages((p) => ({
-        ...p,
-        left: URL.createObjectURL(f),
-      }))
-    }
-    onClear={() =>
-      setPostureImages((p) => ({
-        ...p,
-        left: "",
-      }))
-    }
-  />
-
-  <PoseSlot
-    label="รูปด้านขวา (Right)"
-    preview={postureImages.right}
-    onFile={(f) =>
-      setPostureImages((p) => ({
-        ...p,
-        right: URL.createObjectURL(f),
-      }))
-    }
-    onClear={() =>
-      setPostureImages((p) => ({
-        ...p,
-        right: "",
-      }))
-    }
-  />
-
-  <PoseSlot
-    label="รูปด้านหลัง (Back)"
-    preview={postureImages.back}
-    onFile={(f) =>
-      setPostureImages((p) => ({
-        ...p,
-        back: URL.createObjectURL(f),
-      }))
-    }
-    onClear={() =>
-      setPostureImages((p) => ({
-        ...p,
-        back: "",
-      }))
-    }
-  />
-</div>
-<div
-  style={{
-    ...S.card,
-    marginTop: 20,
-    textAlign: "center",
-    background: "#070f1e",
-  }}
->
-  <button
-    onClick={processStaticPosture}
-    style={{
-      ...S.bp,
-      width: "100%",
-      background: "#10b981",
-      color: "#fff",
-    }}
-  >
-    ประมวลผลจุดตรึงสรีระ
-  </button>
-
-  {postureAnalyzed && (
-    <div
-      style={{
-        marginTop: 20,
-        background: "#091120",
-        border: "1px solid #1e293b",
-        borderRadius: 20,
-        padding: 20,
-      }}
-    >
-      <h3
-        style={{
-          color: "#fff",
-          marginBottom: 10,
-        }}
-      >
-        ความเสี่ยง Office Syndrome
-      </h3>
-
       <div
         style={{
-          fontSize: 42,
-          fontWeight: 800,
-          color: "#00e5ff",
+          ...S.card,
+          gridColumn: "span 3",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 14,
+          background: "#070f1e",
         }}
       >
-        {officeRisk}%
+        <PoseSlot
+          label="รูปด้านหน้า (Front)"
+          preview={postureImages.front}
+          onFile={async (f) => {
+
+            const fileName =
+              `front-${Date.now()}.jpg`;
+
+            const { data, error } =
+              await supabase.storage
+                .from("posture-images")
+                .upload(fileName, f);
+
+            if (error) {
+              console.error(error);
+              return;
+            }
+
+            const {
+              data: { publicUrl }
+            } = supabase.storage
+              .from("posture-images")
+              .getPublicUrl(data.path);
+
+            console.log(publicUrl);
+
+            setPostureImages((p) => ({
+              ...p,
+              front: publicUrl,
+            }));
+          }}
+        />
+
+
+        <PoseSlot
+          label="รูปด้านซ้าย (Left)"
+          preview={postureImages.left}
+          onFile={async (f) => {
+
+            const fileName =
+              `front-${Date.now()}.jpg`;
+
+            const { data, error } =
+              await supabase.storage
+                .from("posture-images")
+                .upload(fileName, f);
+
+            if (error) {
+              console.error(error);
+              return;
+            }
+
+            const { data: publicUrl } =
+              supabase.storage
+                .from("posture-images")
+                .getPublicUrl(data.path);
+
+            setPostureImages((p) => ({
+              ...p,
+              left: publicUrl.publicUrl,
+            }));
+          }}
+        />
+
+
+        <PoseSlot
+          label="รูปด้านขวา (Right)"
+          preview={postureImages.right}
+          onFile={async (f) => {
+
+            const fileName =
+              `front-${Date.now()}.jpg`;
+
+            const { data, error } =
+              await supabase.storage
+                .from("posture-images")
+                .upload(fileName, f);
+
+            if (error) {
+              console.error(error);
+              return;
+            }
+
+            const { data: publicUrl } =
+              supabase.storage
+                .from("posture-images")
+                .getPublicUrl(data.path);
+
+            setPostureImages((p) => ({
+              ...p,
+              right: publicUrl.publicUrl,
+            }));
+          }}
+        />
+
+
+        <PoseSlot
+          label="รูปด้านหลัง (Back)"
+          preview={postureImages.back}
+          onFile={async (f) => {
+
+            const fileName =
+              `front-${Date.now()}.jpg`;
+
+            const { data, error } =
+              await supabase.storage
+                .from("posture-images")
+                .upload(fileName, f);
+
+            if (error) {
+              console.error(error);
+              return;
+            }
+
+            const { data: publicUrl } =
+              supabase.storage
+                .from("posture-images")
+                .getPublicUrl(data.path);
+
+
+            setPostureImages((p) => ({
+              ...p,
+              back: publicUrl.publicUrl,
+            }));
+          }}
+        />
+
       </div>
 
       <div
         style={{
-          marginTop: 10,
-          color:
-            officeLevel === "HIGH"
-              ? "#ef4444"
-              : officeLevel === "MEDIUM"
-              ? "#f59e0b"
-              : "#10b981",
+          ...S.card,
+          marginTop: 20,
+          textAlign: "center",
+          background: "#070f1e",
         }}
       >
-        ระดับความเสี่ยง : {officeLevel}
+        <button
+          onClick={processStaticPosture}
+          style={{
+            ...S.bp,
+            width: "100%",
+            background: "#10b981",
+            color: "#fff",
+          }}
+        >
+          ประมวลผลจุดตรึงสรีระ
+        </button>
+
+        {postureAnalyzed && (
+          <div
+            style={{
+              marginTop: 20,
+              background: "#091120",
+              border: "1px solid #1e293b",
+              borderRadius: 20,
+              padding: 20,
+            }}
+          >
+            <h3
+              style={{
+                color: "#fff",
+                marginBottom: 10,
+              }}
+            >
+              ความเสี่ยง Office Syndrome
+            </h3>
+
+            <div
+              style={{
+                fontSize: 42,
+                fontWeight: 800,
+                color: "#00e5ff",
+              }}
+            >
+              {officeRisk}%
+            </div>
+
+            <div
+              style={{
+                marginTop: 10,
+                color:
+                  officeLevel === "HIGH"
+                    ? "#ef4444"
+                    : officeLevel === "MEDIUM"
+                      ? "#f59e0b"
+                      : "#10b981",
+              }}
+            >
+              ระดับความเสี่ยง : {officeLevel}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  )}
-</div>
 
       {/* STEP 2: DYNAMIC VIDEO */}
       <div style={{ padding: "50px 0" }}>
@@ -2430,38 +2724,38 @@ navBtn: {
       </div>
 
       {/* STEP 3: CLINICAL REPORT (WITH NEW INTERACTIVE ANATOMY) */}
-     <div
-  style={{
-    background: "#050b14",
-    padding: "50px 0",
-    borderTop: "1px solid #1e293b",
-  }}
->
-  <div style={S.wrap}>
+      <div
+        style={{
+          background: "#050b14",
+          padding: "50px 0",
+          borderTop: "1px solid #1e293b",
+        }}
+      >
+        <div style={S.wrap}>
 
-    <div style={S.st}>
-      <span style={S.sn}>3</span>
-      รายงานผลวิเคราะห์ความเสี่ยงการบาดเจ็บของคุณ
-    </div>
+          <div style={S.st}>
+            <span style={S.sn}>3</span>
+            รายงานผลวิเคราะห์ความเสี่ยงการบาดเจ็บของคุณ
+          </div>
 
-    <button
-      onClick={generateAIReport}
-      style={{
-        background: "#00e5ff",
-        color: "#000",
-        border: "none",
-        padding: "12px 20px",
-        borderRadius: 12,
-        fontWeight: 700,
-        cursor: "pointer",
-        marginTop: 20,
-        marginBottom: 20
-      }}
-    >
-      สร้างรายงาน AI
-    </button>
+          <button
+            onClick={generateAIReport}
+            style={{
+              background: "#00e5ff",
+              color: "#000",
+              border: "none",
+              padding: "12px 20px",
+              borderRadius: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              marginTop: 20,
+              marginBottom: 20
+            }}
+          >
+            สร้างรายงาน AI
+          </button>
 
-    {aiReport.executiveSummary && (
+          {aiReport.executiveSummary && (
             <div
               style={{
                 marginTop: 20,
@@ -2706,7 +3000,7 @@ navBtn: {
           )}
           <button
             onClick={() => {
-                  window.location.href = "/dashboard";
+              window.location.href = "/dashboard";
             }}
             style={{
               background: "#22c55e",
@@ -2721,19 +3015,19 @@ navBtn: {
             📄 Open Report
           </button>
           <p style={S.ss}>ตัวเลขคำนวณแบบแม่นยำร่วมกับแผนผังชีวกลศาสตร์เพื่อชี้เป้าความเสี่ยงการเกิดโรคเรื้อรัง</p>
-            </div> {/* ปิด S.wrap */}
-            </div>   {/* ปิด STEP 3 */}
+        </div> {/* ปิด S.wrap */}
+      </div>   {/* ปิด STEP 3 */}
 
 
-{/* STEP 4 */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 26 }}>
-            <Stat label="RUNNING SCORE" val={stableScore || "—"} color="#00e5ff" />
-            <Stat label="RISK STATUS" val={stableRiskLevel} color={riskColor} />
-            <Stat label="Peak Knee Angle" val={stableKneeAngle !== null ? `${stableKneeAngle}°` : "—"} color="#3b82f6" />
-            <Stat label="MAX DYNAMIC HIP DROP" val={stableHipDrop !== null ? `${stableHipDrop}°` : "—"} color="#a78bfa" />
-          </div>
+      {/* STEP 4 */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 26 }}>
+        <Stat label="RUNNING SCORE" val={stableScore || "—"} color="#00e5ff" />
+        <Stat label="RISK STATUS" val={stableRiskLevel} color={riskColor} />
+        <Stat label="Peak Knee Angle" val={stableKneeAngle !== null ? `${stableKneeAngle}°` : "—"} color="#3b82f6" />
+        <Stat label="MAX DYNAMIC HIP DROP" val={stableHipDrop !== null ? `${stableHipDrop}°` : "—"} color="#a78bfa" />
+      </div>
 
-          {/* TWO-COLUMN LAYOUT: SKELETON MODEL VS RISK CARDS */}
+{/* TWO-COLUMN LAYOUT: SKELETON MODEL VS RISK CARDS */}
 <div
   style={{
     display: "grid",
@@ -2744,7 +3038,6 @@ navBtn: {
   }}
 >
   {/* LEFT */}
-
   <div
     style={{
       height: "100%",
@@ -2753,420 +3046,422 @@ navBtn: {
   >
     <InteractiveAnatomy
       risks={injuryRisks}
+      frontImage={postureImages?.front}
     />
   </div>
 
   {/* RIGHT */}
-
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 16,
-      minHeight: 720,
-    }}
-  >
-    <RiskCard
-      title="Runner's Knee (สะบ้าอักเสบ)"
-      pct={injuryRisks.runnersKnee}
-      desc="ประเมินผิวข้อสะบ้าจากมุมเหยียดเข่า ร่วมกับภาวะเข่าบิดล้มเข้าด้านใน"
-    />
-
-    <RiskCard
-      title="Achilles Tendonitis (เอ็นร้อยหวาย)"
-      pct={injuryRisks.achilles}
-      desc="คำนวณแรงเค้นสะสมจากระยะก้าวยาวเกินจุดศูนย์ถ่วงลำตัว (Overstride)"
-    />
-
-    <RiskCard
-      title="IT Band Syndrome (เจ็บข้างเข่า)"
-      pct={injuryRisks.itBand}
-      desc="วัดมุมบิดเค้นเนื้อเยื่อข้างขาจากการทรุดตัวของกระดูกเชิงกรานและสะโพก"
-    />
-
-    <RiskCard
-      title="Shin Splints (เจ็บหน้าแข้ง)"
-      pct={injuryRisks.shinSplints}
-      desc="ประเมินแรงกระแทกแนวกระดูกหน้าแข้งจากการลงส้นเท้าล้ำแนวสะโพกเกินเกณฑ์"
-    />
-  </div>
-</div>
-  {/* OFFICE SYNDROME SECTION */}
-
-<div
-  style={{
-    marginTop: 24,
-    background: "#091120",
-    borderRadius: 24,
-    padding: 24,
-    border: "1px solid #1e293b",
-  }}
->
-  <h3
-    style={{
-      color: "#fff",
-      fontSize: 20,
-      marginBottom: 16,
-    }}
-  >
-    OFFICE SYNDROME ANALYSIS
-  </h3>
-
- {reportData?.officeSyndrome && (
-  <>
-
-    <OfficeRiskCard
-      risk={reportData.officeSyndrome.risk}
-      level={reportData.officeSyndrome.level}
-    />
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-          gap: 16,
-          marginTop: 20,
-        }}
-        
-      >
-        
-        <Stat
-          label="CRANIOVERTEBRAL ANGLE (CVA)"
-          val={`${Math.round(reportData.officeSyndrome.neckAngle)}°`}
-          color="#ef4444"
-        />
-        <Stat
-  label="ROUNDED SHOULDER"
-  val={`${Math.round(
-    reportData.officeSyndrome.roundedShoulder || 0
-  )}`}
-  color="#8b5cf6"
-/>
-
-<Stat
-  label="UPPER CROSS"
-  val={`${Math.round(
-    reportData.officeSyndrome.upperCross || 0
-  )}%`}
-  color="#ec4899"
-/>
-
-<Stat
-  label="LOWER CROSS"
-  val={`${Math.round(
-    reportData.officeSyndrome.lowerCross || 0
-  )}%`}
-  color="#14b8a6"
-/>
-        <Stat
-        label="FORWARD HEAD SCORE"
-        val={`${Math.round(
-         reportData.officeSyndrome.forwardHeadScore
-        )}%`}
-        color="#ef4444"
-        />
-        <Stat
-          label="SHOULDER ASYMMETRY"
-          val={`${Math.round(reportData.officeSyndrome.shoulderAsymmetry)}%`}
-          color="#f59e0b"
-        />
-
-        <Stat
-          label="PELVIC ASYMMETRY"
-          val={`${Math.round(reportData.officeSyndrome.pelvicAsymmetry)}%`}
-          color="#3b82f6"
-        />
-      </div>
-
-      <div
-        style={{
-          marginTop: 20,
-          background: "#07101f",
-          borderRadius: 20,
-          padding: 20,
-          border: "1px solid #1e293b",
-        }}
-      >
-        <div
-          style={{
-            color: "#fff",
-            fontWeight: 700,
-            marginBottom: 10,
-          }}
-        >
-          RECOMMENDED CORRECTIVE EXERCISES
-        </div>
-
-       {(reportData?.officeSyndrome?.recommendations?.length || 0) > 0 ? (
-  reportData.officeSyndrome.recommendations.map((item, index) => (
+  <div>
     <div
-      key={index}
       style={{
-        color: "#00e5ff",
-        marginBottom: 8,
-        fontWeight: 600,
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 16,
+        minHeight: 720,
       }}
     >
-      ✓ {item}
+      <RiskCard
+        title="Runner's Knee (สะบ้าอักเสบ)"
+        pct={injuryRisks.runnersKnee}
+        desc="ประเมินผิวข้อสะบ้าจากมุมเหยียดเข่า ร่วมกับภาวะเข่าบิดล้มเข้าด้านใน"
+      />
+
+      <RiskCard
+        title="Achilles Tendonitis (เอ็นร้อยหวาย)"
+        pct={injuryRisks.achilles}
+        desc="คำนวณแรงเค้นสะสมจากระยะก้าวยาวเกินจุดศูนย์ถ่วงลำตัว (Overstride)"
+      />
+
+      <RiskCard
+        title="IT Band Syndrome (เจ็บข้างเข่า)"
+        pct={injuryRisks.itBand}
+        desc="วัดมุมบิดเค้นเนื้อเยื่อข้างขาจากการทรุดตัวของกระดูกเชิงกรานและสะโพก"
+      />
+
+      <RiskCard
+        title="Shin Splints (เจ็บหน้าแข้ง)"
+        pct={injuryRisks.shinSplints}
+        desc="ประเมินแรงกระแทกแนวกระดูกหน้าแข้งจากการลงส้นเท้าล้ำแนวสะโพกเกินเกณฑ์"
+      />
     </div>
-  ))
-) : (
-  <div
-    style={{
-      color: "#94a3b8",
-      fontSize: 14,
-    }}
-  >
-    ไม่พบความผิดปกติที่ต้องแก้ไขเพิ่มเติม
   </div>
-)}
-      </div>
-    </>
-  )}
 </div>
+        {/* OFFICE SYNDROME SECTION */}
 
-<div style={{ ...S.card, background: "#08101f" }}>
-  <div
-    style={{
-      fontWeight: 700,
-      marginBottom: 12,
-      color: "#00e5ff",
-      fontSize: 15,
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-    }}
-  >
-    <span>🤖</span>
-    สรุปภาพรวมและข้อเสนอแนะเชิงชีวกลศาสตร์ (AI Overview)
-  </div>
+        <div
+          style={{
+            marginTop: 24,
+            background: "#091120",
+            borderRadius: 24,
+            padding: 24,
+            border: "1px solid #1e293b",
+          }}
+        >
+          <h3
+            style={{
+              color: "#fff",
+              fontSize: 20,
+              marginBottom: 16,
+            }}
+          >
+            OFFICE SYNDROME ANALYSIS
+          </h3>
 
-  <p
-    style={{
-      fontSize: 13,
-      color: "#94a3b8",
-      lineHeight: 1.8,
-      margin: 0,
-    }}
-  >
-    {analysisSummary || "ระบบกำลังประมวลผลโครงสร้างเพื่อสรุปพฤติกรรมแรงกดและแนวองศากระดูกของคุณ"}
-  </p>
-</div>
-            <div style={{ ...S.card, background: "#08101f" }}>
-              <div style={{ fontWeight: 700, marginBottom: 12, color: "#f59e0b", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span>🎯</span> แนวทางและโปรแกรมแก้ไข: {diagnosis || "รอข้อมูล"}</div>
-              <div style={{ background: "#040914", border: "1px solid #1e293b", borderRadius: 14, padding: "16px", fontSize: 13, color: "#e2e8f0", lineHeight: 1.7 }}>
-                {recommendation || "แนวทางฝึกความแข็งแรงกล้ามเนื้อและปรับฟอร์มการวิ่งที่ถูกต้องเพื่อลดการบาดเจ็บ"}
-              </div>
-      </div>
-      
-          <div id="recovery-programs" style={{ padding: "50px 0" }}>
-  <div style={S.wrap}>
+          {reportData?.officeSyndrome && (
+            <>
 
-    <div style={S.st}>
-      <span style={S.sn}>4</span>
-      โปรแกรมออกกำลังกายฟื้นฟูจำเพาะบุคคลที่แนะนำสำหรับคุณ
-    </div>
+              <OfficeRiskCard
+                risk={reportData.officeSyndrome.risk}
+                level={reportData.officeSyndrome.level}
+              />
 
-          <p style={S.ss}>
-            คอร์สฟื้นฟูสมดุลความแข็งแรงกล้ามเนื้อ
-            ออกแบบมาเพื่อแก้ปวดและป้องกันจุดเสี่ยงเจ็บของคุณโดยเฉพาะ
-          </p>
-          <div style={S.courseGrid}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+                  gap: 16,
+                  marginTop: 20,
+                }}
 
-            <div
-              style={{
-                ...S.courseCard,
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-                background:
-                  "linear-gradient(180deg,#07101f 0%,#0d1727 100%)",
-                border: "1px solid #1e293b",
-              }}
-            >
+              >
 
-              <div style={{ padding: 20 }}>
-
-                <img
-                  src="/courses/knee.jpg"
-                  alt="Knee Recovery"
-                  style={{
-                    width: "100%",
-                    height: 220,
-                    objectFit: "cover",
-                    borderRadius: 14,
-                  }}
+                <Stat
+                  label="CRANIOVERTEBRAL ANGLE (CVA)"
+                  val={`${Math.round(reportData.officeSyndrome.neckAngle)}°`}
+                  color="#ef4444"
+                />
+                <Stat
+                  label="ROUNDED SHOULDER"
+                  val={`${Math.round(
+                    reportData.officeSyndrome.roundedShoulder || 0
+                  )}`}
+                  color="#8b5cf6"
                 />
 
-                <h3
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: "#fff",
-                    marginBottom: 8,
-                  }}
-                >
-                  PRO-KNEE: โปรแกรมแก้ปวดเข่าในนักวิ่ง
-                </h3>
+                <Stat
+                  label="UPPER CROSS"
+                  val={`${Math.round(
+                    reportData.officeSyndrome.upperCross || 0
+                  )}%`}
+                  color="#ec4899"
+                />
 
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: "#64748b",
-                    lineHeight: 1.6,
-                    margin: 0,
-                    minHeight: 70,
-                  }}
-                >
-                  ลดแรงกดเค้นที่ผิวข้อสะบ้าเข่า
-                  เสริมความแข็งแรงกล้ามเนื้อรอบหน้าขา
-                  เพื่อความมั่นคงในการลงน้ำหนัก
-                </p>
+                <Stat
+                  label="LOWER CROSS"
+                  val={`${Math.round(
+                    reportData.officeSyndrome.lowerCross || 0
+                  )}%`}
+                  color="#14b8a6"
+                />
+                <Stat
+                  label="FORWARD HEAD SCORE"
+                  val={`${Math.round(
+                    reportData.officeSyndrome.forwardHeadScore
+                  )}%`}
+                  color="#ef4444"
+                />
+                <Stat
+                  label="SHOULDER ASYMMETRY"
+                  val={`${Math.round(reportData.officeSyndrome.shoulderAsymmetry)}%`}
+                  color="#f59e0b"
+                />
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    fontSize: 11,
-                    color: "#94a3b8",
-                    marginTop: 14,
-                    background: "#040914",
-                    padding: "6px 12px",
-                    borderRadius: 8,
-                    width: "fit-content",
-                  }}
-                >
-                  <span>⏱️ 6 สัปดาห์</span>
-                  <span>📹 24 วิดีโอ</span>
-                </div>
+                <Stat
+                  label="PELVIC ASYMMETRY"
+                  val={`${Math.round(reportData.officeSyndrome.pelvicAsymmetry)}%`}
+                  color="#3b82f6"
+                />
               </div>
 
               <div
                 style={{
-                  background: "#0d1727",
-                  padding: "16px 20px",
+                  marginTop: 20,
+                  background: "#07101f",
+                  borderRadius: 20,
+                  padding: 20,
+                  border: "1px solid #1e293b",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#fff",
+                    fontWeight: 700,
+                    marginBottom: 10,
+                  }}
+                >
+                  RECOMMENDED CORRECTIVE EXERCISES
+                </div>
+
+                {(reportData?.officeSyndrome?.recommendations?.length || 0) > 0 ? (
+                  reportData.officeSyndrome.recommendations.map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        color: "#00e5ff",
+                        marginBottom: 8,
+                        fontWeight: 600,
+                      }}
+                    >
+                      ✓ {item}
+                    </div>
+                  ))
+                ) : (
+                  <div
+                    style={{
+                      color: "#94a3b8",
+                      fontSize: 14,
+                    }}
+                  >
+                    ไม่พบความผิดปกติที่ต้องแก้ไขเพิ่มเติม
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ ...S.card, background: "#08101f" }}>
+          <div
+            style={{
+              fontWeight: 700,
+              marginBottom: 12,
+              color: "#00e5ff",
+              fontSize: 15,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span>🤖</span>
+            สรุปภาพรวมและข้อเสนอแนะเชิงชีวกลศาสตร์ (AI Overview)
+          </div>
+
+          <p
+            style={{
+              fontSize: 13,
+              color: "#94a3b8",
+              lineHeight: 1.8,
+              margin: 0,
+            }}
+          >
+            {analysisSummary || "ระบบกำลังประมวลผลโครงสร้างเพื่อสรุปพฤติกรรมแรงกดและแนวองศากระดูกของคุณ"}
+          </p>
+        </div>
+        <div style={{ ...S.card, background: "#08101f" }}>
+          <div style={{ fontWeight: 700, marginBottom: 12, color: "#f59e0b", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span>🎯</span> แนวทางและโปรแกรมแก้ไข: {diagnosis || "รอข้อมูล"}</div>
+          <div style={{ background: "#040914", border: "1px solid #1e293b", borderRadius: 14, padding: "16px", fontSize: 13, color: "#e2e8f0", lineHeight: 1.7 }}>
+            {recommendation || "แนวทางฝึกความแข็งแรงกล้ามเนื้อและปรับฟอร์มการวิ่งที่ถูกต้องเพื่อลดการบาดเจ็บ"}
+          </div>
+        </div>
+
+        <div id="recovery-programs" style={{ padding: "50px 0" }}>
+          <div style={S.wrap}>
+
+            <div style={S.st}>
+              <span style={S.sn}>4</span>
+              โปรแกรมออกกำลังกายฟื้นฟูจำเพาะบุคคลที่แนะนำสำหรับคุณ
+            </div>
+
+            <p style={S.ss}>
+              คอร์สฟื้นฟูสมดุลความแข็งแรงกล้ามเนื้อ
+              ออกแบบมาเพื่อแก้ปวดและป้องกันจุดเสี่ยงเจ็บของคุณโดยเฉพาะ
+            </p>
+            <div style={S.courseGrid}>
+
+              <div
+                style={{
+                  ...S.courseCard,
+                  overflow: "hidden",
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  borderTop: "1px solid #1e293b",
+                  flexDirection: "column",
+                  background:
+                    "linear-gradient(180deg,#07101f 0%,#0d1727 100%)",
+                  border: "1px solid #1e293b",
                 }}
               >
 
-                <div style={S.priceTag}>
-                  3,000{" "}
-                  <span
+                <div style={{ padding: 20 }}>
+
+                  <img
+                    src="/courses/knee.jpg"
+                    alt="Knee Recovery"
+                    style={{
+                      width: "100%",
+                      height: 220,
+                      objectFit: "cover",
+                      borderRadius: 14,
+                    }}
+                  />
+
+                  <h3
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: "#fff",
+                      marginBottom: 8,
+                    }}
+                  >
+                    PRO-KNEE: โปรแกรมแก้ปวดเข่าในนักวิ่ง
+                  </h3>
+
+                  <p
                     style={{
                       fontSize: 12,
                       color: "#64748b",
-                      fontWeight: 400,
+                      lineHeight: 1.6,
+                      margin: 0,
+                      minHeight: 70,
                     }}
                   >
-                    THB
-                  </span>
+                    ลดแรงกดเค้นที่ผิวข้อสะบ้าเข่า
+                    เสริมความแข็งแรงกล้ามเนื้อรอบหน้าขา
+                    เพื่อความมั่นคงในการลงน้ำหนัก
+                  </p>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      fontSize: 11,
+                      color: "#94a3b8",
+                      marginTop: 14,
+                      background: "#040914",
+                      padding: "6px 12px",
+                      borderRadius: 8,
+                      width: "fit-content",
+                    }}
+                  >
+                    <span>⏱️ 6 สัปดาห์</span>
+                    <span>📹 24 วิดีโอ</span>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() =>
-                    setSelectedCourse({
-                      name: "PRO-KNEE",
-                      price: 3000,
-                    })
-                  }
+                <div
                   style={{
-                    ...S.bp,
-                    padding: "8px 16px",
-                    fontSize: 12,
+                    background: "#0d1727",
+                    padding: "16px 20px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    borderTop: "1px solid #1e293b",
                   }}
                 >
-                  เลือกคอร์สนี้
-                </button>
+
+                  <div style={S.priceTag}>
+                    3,000{" "}
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "#64748b",
+                        fontWeight: 400,
+                      }}
+                    >
+                      THB
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      setSelectedCourse({
+                        name: "PRO-KNEE",
+                        price: 3000,
+                      })
+                    }
+                    style={{
+                      ...S.bp,
+                      padding: "8px 16px",
+                      fontSize: 12,
+                    }}
+                  >
+                    เลือกคอร์สนี้
+                  </button>
+                </div>
+
               </div>
 
-            </div>
 
-
-            <div style={S.courseCard}>
-              <div style={{ padding: 20 }}>
-                <img
-                  src="/courses/hip.jpg"
-                  alt="Hip Stability"
-                  style={{
-                    width: "100%",
-                    height: 220,
-                    objectFit: "cover",
-                    borderRadius: 14,
-                  }}
-                />
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Run Coaching </h3>
-                <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>วางแผนเวทเทรนนิ่ง และโปรแกรมวิ่ง ให้จบแบบไม่เจ็บ</p>
-                <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
-                  <span>⏱️ 4 สัปดาห์</span><span>📹 20 วิดีโอ</span>
+              <div style={S.courseCard}>
+                <div style={{ padding: 20 }}>
+                  <img
+                    src="/courses/hip.jpg"
+                    alt="Hip Stability"
+                    style={{
+                      width: "100%",
+                      height: 220,
+                      objectFit: "cover",
+                      borderRadius: 14,
+                    }}
+                  />
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Run Coaching </h3>
+                  <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>วางแผนเวทเทรนนิ่ง และโปรแกรมวิ่ง ให้จบแบบไม่เจ็บ</p>
+                  <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
+                    <span>⏱️ 4 สัปดาห์</span><span>📹 20 วิดีโอ</span>
+                  </div>
+                </div>
+                <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
+                  <div style={S.priceTag}>1,990 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
+                  <button
+                    onClick={() =>
+                      setSelectedCourse({
+                        name: "RUN-COACHING",
+                        price: 1990,
+                      })
+                    }
+                    style={{
+                      ...S.bp,
+                      padding: "8px 16px",
+                      fontSize: 12,
+                    }}
+                  >
+                    เลือกคอร์สนี้
+                  </button>
                 </div>
               </div>
-              <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
-                <div style={S.priceTag}>1,990 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
-                <button
-                  onClick={() =>
-                    setSelectedCourse({
-                      name: "RUN-COACHING",
-                      price: 1990,
-                    })
-                  }
-                  style={{
-                    ...S.bp,
-                    padding: "8px 16px",
-                    fontSize: 12,
-                  }}
-                >
-                  เลือกคอร์สนี้
-                </button>
-              </div>
-            </div>
 
-            <div style={S.courseCard}>
-              <div style={{ padding: 20 }}>
-                <img
-                  src="/courses/mobility.jpg"
-                  alt="Mobility Training"
-                  style={{
-                    width: "100%",
-                    height: 220,
-                    objectFit: "cover",
-                    borderRadius: 14,
-                  }}
-                />
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Consulting: คุยและวางโปรแกรม กับโค้ช</h3>
-                <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>คุยเพื่อแก้ปัญหา และวางแผนการฝึกซ้อมกับโค้ชอาร์ท </p>
-                <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
-                  <span>⏱️ 1 ชั่วโมง</span>
+              <div style={S.courseCard}>
+                <div style={{ padding: 20 }}>
+                  <img
+                    src="/courses/mobility.jpg"
+                    alt="Mobility Training"
+                    style={{
+                      width: "100%",
+                      height: 220,
+                      objectFit: "cover",
+                      borderRadius: 14,
+                    }}
+                  />
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Consulting: คุยและวางโปรแกรม กับโค้ช</h3>
+                  <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, margin: 0 }}>คุยเพื่อแก้ปัญหา และวางแผนการฝึกซ้อมกับโค้ชอาร์ท </p>
+                  <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#94a3b8", marginTop: 14, background: "#040914", padding: "6px 12px", borderRadius: 8, width: "fit-content" }}>
+                    <span>⏱️ 1 ชั่วโมง</span>
+                  </div>
                 </div>
-              </div>
-              <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
-                <div style={S.priceTag}>2000 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
-                <button
-                  onClick={() =>
-                    setSelectedCourse({
-                      name: "RUN-MOBILITY",
-                      price: 2000,
-                    })
-                  }
-                  style={{
-                    ...S.bp,
-                    padding: "8px 16px",
-                    fontSize: 12,
-                  }}
-                >
-                  เลือกคอร์สนี้
-                </button>
-             </div> {/* PRICE SECTION */}
+                <div style={{ background: "#0d1727", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1e293b" }}>
+                  <div style={S.priceTag}>2000 <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>THB</span></div>
+                  <button
+                    onClick={() =>
+                      setSelectedCourse({
+                        name: "RUN-MOBILITY",
+                        price: 2000,
+                      })
+                    }
+                    style={{
+                      ...S.bp,
+                      padding: "8px 16px",
+                      fontSize: 12,
+                    }}
+                  >
+                    เลือกคอร์สนี้
+                  </button>
+                </div> {/* PRICE SECTION */}
 
-</div> {/* RUN-MOBILITY CARD */}
+              </div> {/* RUN-MOBILITY CARD */}
 
-</div> {/* courseGrid */}
+            </div> {/* courseGrid */}
 
-</div> {/* S.wrap */}
+          </div> {/* S.wrap */}
 
-</div> {/* recovery-programs */}
+        </div> {/* recovery-programs */}
 
 
         {/* STEP 5: PAYMENT GATEWAY */}
@@ -3332,168 +3627,168 @@ navBtn: {
                   </div>
 
                 </div>
-                </div>
+              </div>
 
-                {/* SLIP UPLOAD */}
+              {/* SLIP UPLOAD */}
+              <div
+                style={{
+                  ...S.card,
+                  background: "#070f1e",
+                }}
+              >
                 <div
                   style={{
-                    ...S.card,
-                    background: "#070f1e",
+                    fontSize: 12,
+                    color: "#64748b",
+                    fontWeight: 700,
+                    marginBottom: 10,
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#64748b",
-                      fontWeight: 700,
-                      marginBottom: 10,
-                    }}
-                  >
-                    อัปโหลดสลิปการโอนเงิน (Upload Slip)
-                  </div>
+                  อัปโหลดสลิปการโอนเงิน (Upload Slip)
+                </div>
 
-                  <div
-                    style={{
-                      position: "relative",
-                      border: "2px dashed #223554",
-                      borderRadius: 16,
-                      padding: "20px 12px",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "#040914",
-                      height: 140,
-                    }}
-                  >
-                    {slipImage ? (
+                <div
+                  style={{
+                    position: "relative",
+                    border: "2px dashed #223554",
+                    borderRadius: 16,
+                    padding: "20px 12px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#040914",
+                    height: 140,
+                  }}
+                >
+                  {slipImage ? (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        position: "relative",
+                      }}
+                    >
+                      <img
+                        src={slipImage}
+                        alt="Slip"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          borderRadius: 8,
+                        }}
+                      />
+
+                      <button
+                        onClick={() => setSlipImage("")}
+                        style={{
+                          position: "absolute",
+                          top: -4,
+                          right: -4,
+                          background: "rgba(239,68,68,0.9)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "2px 6px",
+                          fontSize: 9,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ลบรูป
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        gap: 6,
+                      }}
+                    >
+                      <div style={{ fontSize: 26 }}>🧾</div>
+
                       <div
                         style={{
-                          width: "100%",
-                          height: "100%",
-                          position: "relative",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "#e2e8f0",
                         }}
                       >
-                        <img
-                          src={slipImage}
-                          alt="Slip"
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "contain",
-                            borderRadius: 8,
-                          }}
-                        />
-
-                        <button
-                          onClick={() => setSlipImage("")}
-                          style={{
-                            position: "absolute",
-                            top: -4,
-                            right: -4,
-                            background: "rgba(239,68,68,0.9)",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 6,
-                            padding: "2px 6px",
-                            fontSize: 9,
-                            cursor: "pointer",
-                          }}
-                        >
-                          ลบรูป
-                        </button>
+                        คลิกเพื่อเลือกไฟล์สลิป
                       </div>
-                    ) : (
-                      <label
+
+                      <div
                         style={{
-                          width: "100%",
-                          height: "100%",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          gap: 6,
+                          fontSize: 10,
+                          color: "#475569",
                         }}
                       >
-                        <div style={{ fontSize: 26 }}>🧾</div>
+                        รองรับไฟล์ JPG, PNG
+                      </div>
 
-                        <div
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: "#e2e8f0",
-                          }}
-                        >
-                          คลิกเพื่อเลือกไฟล์สลิป
-                        </div>
-
-                        <div
-                          style={{
-                            fontSize: 10,
-                            color: "#475569",
-                          }}
-                        >
-                          รองรับไฟล์ JPG, PNG
-                        </div>
-
-                        <input
-                          type="file"
-                          accept="image/*"
-                          style={{ display: "none" }}
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) {
-                              setSlipImage(URL.createObjectURL(f));
-                            }
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      if (slipImage) {
-                        alert("ระบบได้รับไฟล์สลิปแล้ว กำลังส่งตรวจความถูกต้องอัตโนมัติครับบอส");
-                      } else {
-                        alert("กรุณาแนบภาพสลิปเงินโอนก่อนครับบอส");
-                      }
-                    }}
-                    style={{
-                      ...S.bp,
-                      width: "100%",
-                      marginTop: 14,
-                    }}
-                  >
-                    ส่งสลิปเพื่อยืนยันการชำระเงิน
-                  </button>
-                              
-
-          </div> {/* SLIP UPLOAD */}
-
-</div> {/* PAYMENT GRID */}
-
-</div> {/* STEP 5 WRAP */}
-
-</div> {/* STEP 5 */}
-          {/* FOOTER & COPYRIGHT SECTION */}
-          <footer style={{ background: "#020613", borderTop: "1px solid #1e293b", padding: "40px 0 30px" }}>
-            <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{ fontWeight: 900, fontSize: 18, color: "#fff", letterSpacing: 0.5 }}>
-                  RUNLAB <span style={{ fontSize: 12, color: "#00e5ff", fontWeight: 600 }}>BY นายปริญญา ปานศิริ</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) {
+                            setSlipImage(URL.createObjectURL(f));
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
-                <p style={{ fontSize: 12, color: "#475569", margin: 0, textAlign: "center" }}>
-                  ระบบวิเคราะห์สรีระและฟอร์มการวิ่งเพื่อการป้องกันอาการบาดเจ็บอย่างตรงจุด
-                </p>
+
+                <button
+                  onClick={() => {
+                    if (slipImage) {
+                      alert("ระบบได้รับไฟล์สลิปแล้ว กำลังส่งตรวจความถูกต้องอัตโนมัติครับบอส");
+                    } else {
+                      alert("กรุณาแนบภาพสลิปเงินโอนก่อนครับบอส");
+                    }
+                  }}
+                  style={{
+                    ...S.bp,
+                    width: "100%",
+                    marginTop: 14,
+                  }}
+                >
+                  ส่งสลิปเพื่อยืนยันการชำระเงิน
+                </button>
+
+
+              </div> {/* SLIP UPLOAD */}
+
+            </div> {/* PAYMENT GRID */}
+
+          </div> {/* STEP 5 WRAP */}
+
+        </div> {/* STEP 5 */}
+        {/* FOOTER & COPYRIGHT SECTION */}
+        <footer style={{ background: "#020613", borderTop: "1px solid #1e293b", padding: "40px 0 30px" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ fontWeight: 900, fontSize: 18, color: "#fff", letterSpacing: 0.5 }}>
+                RUNLAB <span style={{ fontSize: 12, color: "#00e5ff", fontWeight: 600 }}>BY นายปริญญา ปานศิริ</span>
               </div>
-              <div style={{ width: "100%", maxWidth: 300, height: 1, background: "linear-gradient(to right, transparent, #1e293b, transparent)" }} />
-              <div style={{ fontSize: 12, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
-                © {new Date().getFullYear()} <strong>Runlab by นายปริญญา ปานศิริ</strong>. All Rights Reserved.
-              </div>
+              <p style={{ fontSize: 12, color: "#475569", margin: 0, textAlign: "center" }}>
+                ระบบวิเคราะห์สรีระและฟอร์มการวิ่งเพื่อการป้องกันอาการบาดเจ็บอย่างตรงจุด
+              </p>
             </div>
-          </footer>
+            <div style={{ width: "100%", maxWidth: 300, height: 1, background: "linear-gradient(to right, transparent, #1e293b, transparent)" }} />
+            <div style={{ fontSize: 12, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
+              © {new Date().getFullYear()} <strong>Runlab by นายปริญญา ปานศิริ</strong>. All Rights Reserved.
+            </div>
           </div>
+        </footer>
+      </div>
       );
 }

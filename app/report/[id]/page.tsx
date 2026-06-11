@@ -6,6 +6,8 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import RunlabBodyRiskMap
+from "@/components/RunlabBodyRiskMap";
 
 export default function ReportPage() {
   const params = useParams();
@@ -140,7 +142,149 @@ export default function ReportPage() {
   }
 
 const data = report.report_json || {};
+console.log("LANDMARKS =", data?.landmarks);
+const front = data?.landmarks?.front || [];
+console.log(
+  "FRONT LANDMARKS",
+  front
+);
 
+console.log(
+  "FRONT LENGTH",
+  front.length
+);
+const left = data?.landmarks?.left || [];
+const right = data?.landmarks?.right || [];
+const back = data?.landmarks?.back || [];
+<div
+  style={{
+    marginTop: 30,
+  }}
+>
+  <h2
+    style={{
+      color: "#fff",
+      marginBottom: 20,
+    }}
+  >
+    Static Posture Assessment
+  </h2>
+
+  <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(4,1fr)",
+    gap: 20,
+    alignItems: "start",
+  }}
+>
+ 
+
+  <div
+    style={{
+  width: "100%",
+  height: 420,
+  objectFit: "contain",
+  background: "#fff",
+  borderRadius: 16,
+}}
+  >
+     <div>
+  <h4>Front View</h4>
+  <img
+  src={data.assessmentImages?.front}
+  style={{
+    width: "100%",
+    height: 420,
+    objectFit: "contain",
+    background: "#fff",
+    borderRadius: 16,
+  }}
+/>
+
+    {front.length > 24 && (
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+        }}
+      >
+        {/* Shoulder */}
+        <line
+          x1={front[11]?.x * 100}
+          y1={front[11]?.y * 100}
+          x2={front[12]?.x * 100}
+          y2={front[12]?.y * 100}
+          stroke="#00E5FF"
+          strokeWidth="1"
+        />
+
+        {/* Pelvis */}
+        <line
+          x1={front[23]?.x * 100}
+          y1={front[23]?.y * 100}
+          x2={front[24]?.x * 100}
+          y2={front[24]?.y * 100}
+          stroke="#22c55e"
+          strokeWidth="1"
+        />
+
+      </svg>
+    )}
+  </div>
+</div>
+
+    <div>
+      <h4>Left View</h4>
+
+      <img
+  src={data.assessmentImages?.left}
+  style={{
+  width: "100%",
+  height: 420,
+  objectFit: "contain",
+  background: "#fff",
+  borderRadius: 16,
+}}
+/>
+    </div>
+
+    <div>
+      <h4>Right View</h4>
+
+      <img
+  src={data.assessmentImages?.right}
+  style={{
+    width: "100%",
+    height: 420,
+    objectFit: "contain",
+    background: "#fff",
+    borderRadius: 16,
+  }}
+/>
+    </div>
+
+    <div>
+      <h4>Back View</h4>
+
+      <img
+  src={data.assessmentImages?.back}
+  style={{
+    width: "100%",
+    height: 420,
+    objectFit: "contain",
+    background: "#fff",
+    borderRadius: 16,
+  }}
+/>
+    </div>
+  </div>
+</div>
 const risks =
   data.injuryRisks || {};
 const office =
@@ -413,6 +557,123 @@ const handlePayment = async () => {
   value={risks.shinSplints || 0}
 />
 </div>
+{data?.assessmentImages && (
+  <div
+    style={{
+      background: "#07111F",
+      border: "1px solid #1E293B",
+      borderRadius: 24,
+      padding: 28,
+      marginTop: 30,
+    }}
+  >
+    <h2
+      style={{
+        color: "#fff",
+        marginBottom: 20,
+      }}
+    >
+      Static Posture Assessment
+    </h2>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "repeat(4,1fr)",
+        gap: 20,
+      }}
+    >
+      <div
+  style={{
+    position: "relative",
+  }}
+>
+  <img
+    crossOrigin="anonymous"
+    src={data.assessmentImages?.front}
+    style={{
+      width: "100%",
+      height: 220,
+      objectFit: "cover",
+      borderRadius: 12,
+    }}
+  />
+
+  {front.length > 24 && (
+    <svg
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+      }}
+    >
+      {/* Shoulder */}
+      <line
+        x1={`${front[11]?.x * 100}%`}
+        y1={`${front[11]?.y * 100}%`}
+        x2={`${front[12]?.x * 100}%`}
+        y2={`${front[12]?.y * 100}%`}
+        stroke="#00E5FF"
+        strokeWidth="3"
+      />
+
+      {/* Pelvis */}
+      <line
+        x1={`${front[23]?.x * 100}%`}
+        y1={`${front[23]?.y * 100}%`}
+        x2={`${front[24]?.x * 100}%`}
+        y2={`${front[24]?.y * 100}%`}
+        stroke="#22c55e"
+        strokeWidth="3"
+      />
+    </svg>
+  )}
+</div>
+      
+
+      <div>
+        <h4>Left View</h4>
+        <img
+          src={data.assessmentImages?.left}
+          style={{
+            width: "100%",
+            height: 220,
+            objectFit: "cover",
+            borderRadius: 12,
+          }}
+        />
+      </div>
+
+      <div>
+        <h4>Right View</h4>
+        <img
+          src={data.assessmentImages?.right}
+          style={{
+            width: "100%",
+            height: 220,
+            objectFit: "cover",
+            borderRadius: 12,
+          }}
+        />
+      </div>
+
+      <div>
+        <h4>Back View</h4>
+        <img
+          src={data.assessmentImages?.back}
+          style={{
+            width: "100%",
+            height: 220,
+            objectFit: "cover",
+            borderRadius: 12,
+          }}
+        />
+      </div>
+    </div>
+  </div>
+)}
 {report?.is_paid && (
   <>
       <Section title="Executive Summary">
@@ -489,6 +750,10 @@ const handlePayment = async () => {
       )
     )}
   </div>
+  console.log(
+  "ASSESSMENT IMAGES",
+  reportData?.assessmentImages
+);
 
   {/* Recommendations */}
   <div style={{ marginTop: 20 }}>

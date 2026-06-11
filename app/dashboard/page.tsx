@@ -32,7 +32,14 @@ const loadReports = async () => {
   const { data, error } =
   await supabase
     .from("reports")
-    .select("*");
+    .select(`
+id,
+created_at,
+score,
+risk_level,
+diagnosis,
+is_paid
+`)
 
 console.log(data);
 
@@ -99,17 +106,18 @@ console.log(data);
     }
   />
 
-  <StatCard
+<StatCard
   title="OFFICE CASES"
   value={
     reports.filter(
       (r) =>
-        (r.report_json?.officeRisk || 0) >= 40
+        (
+          r.report_json?.officeSyndrome?.risk || 0
+        ) >= 40
     ).length
   }
 />
-</div>
-
+</div>   {/* ปิด Grid ตรงนี้ */}
      {reports.map((report) => (
   <div
     key={report.id}
@@ -161,6 +169,19 @@ console.log(data);
   <span>
     ⚠️ Risk: {report.risk_level}
   </span>
+
+  <span>
+    🧑‍💻 Office: {
+      report.report_json?.officeSyndrome?.level ||
+      "N/A"
+    }
+  </span>
+
+  <span>
+📈 Office Risk: {
+  report.report_json?.officeSyndrome?.risk || 0
+}%
+</span>
 
   <span>
     📅{" "}
