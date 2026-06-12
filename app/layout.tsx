@@ -17,9 +17,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="th">
         <body className={inter.className}>
+          <CookieConsent />
+
           {children}
 
-          <CookieConsent />
           <Footer />
         </body>
       </html>
