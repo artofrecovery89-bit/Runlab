@@ -1,5 +1,5 @@
 "use client";
-
+import PostureOverlay from "../src/components/PostureOverlay";
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
@@ -220,7 +220,9 @@ function drawPoseSkeleton(ctx: CanvasRenderingContext2D, landmarks: any[], w: nu
     ctx.stroke();
   }
 }
-
+  console.log(
+    "DRAW POSE SKELETON"
+  );
 function Ring({ v = 0, size = 110 }) {
   const r = 40;
   const c = 2 * Math.PI * r;
@@ -664,6 +666,7 @@ function PoseSlot({ label, preview, onFile, onClear }: PoseSlotProps) {
 function InteractiveAnatomy({
   risks,
   frontImage,
+  frontLandmarks,
 }: {
   risks: {
     runnersKnee: number;
@@ -672,6 +675,7 @@ function InteractiveAnatomy({
     shinSplints: number;
   };
   frontImage?: string;
+  frontLandmarks?: any[];
 }) {
   const getRiskColor = (value: number) => {
     if (value >= 70) return "#ef4444";
@@ -773,15 +777,11 @@ function InteractiveAnatomy({
             overflow: "hidden",
           }}
         >
-         {frontImage ? (
-  <img
-    src={frontImage}
-    alt="Front Body"
-    style={{
-      width: "100%",
-      height: 550,
-      objectFit: "contain",
-    }}
+         {frontImage &&
+frontLandmarks?.length ? (
+  <PostureOverlay
+    image={frontImage}
+    landmarks={frontLandmarks}
   />
 ) : (
   <div
@@ -3044,10 +3044,12 @@ Neck Angle (CVA): ${Math.round(
       minHeight: 720,
     }}
   >
-    <InteractiveAnatomy
-      risks={injuryRisks}
-      frontImage={postureImages?.front}
-    />
+<InteractiveAnatomy
+  risks={injuryRisks}
+  frontImage={postureImages?.front}
+  frontLandmarks={poseLandmarks?.front}
+/>
+);
   </div>
 
   {/* RIGHT */}
