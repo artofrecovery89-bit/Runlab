@@ -29,22 +29,25 @@ const loadReports = async () => {
 
   console.log("SEARCH USER =", user.id);
 
-  const { data, error } =
-  await supabase
-    .from("reports")
-    .select(`
-id,
-created_at,
-score,
-risk_level,
-diagnosis,
-is_paid
-`)
+const start = performance.now();
 
-console.log(data);
+const { data } = await supabase
+  .from("reports")
+  .select(`
+    id,
+    user_id,
+    created_at,
+    score,
+    risk_level,
+    diagnosis,
+    is_paid
+  `)
+  .eq("user_id", user.id);
 
-  console.log("REPORT DATA =", data);
-  console.log("REPORT ERROR =", error);
+console.log(
+  "QUERY TIME",
+  performance.now() - start
+);
 
   setReports(data || []);
 };
@@ -119,6 +122,7 @@ console.log(data);
 />
 </div>   {/* ปิด Grid ตรงนี้ */}
      {reports.map((report) => (
+      
   <div
     key={report.id}
     style={{
@@ -183,20 +187,21 @@ console.log(data);
 }%
 </span>
 
-  <span>
-    📅{" "}
+<span>
+  📅{" "}
+  {new Date(report.created_at).toLocaleString(
+    "th-TH",
     {
-  new Date(report.created_at)
-    .toLocaleString("th-TH", {
       timeZone: "Asia/Bangkok",
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    })
-}
-  </span>
+    }
+  )}
+</span>
+
 </div>
 
        
