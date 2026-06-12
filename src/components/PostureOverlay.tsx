@@ -264,7 +264,17 @@ export default function PostureOverlay({
       // CENTER POINTS
       // ======================
 
-     
+      drawPoint(
+        shoulderCenter,
+        "#ff8800",
+        8
+      );
+
+      drawPoint(
+        pelvisCenter,
+        "#ff0000",
+        8
+      );
 
       // ======================
       // QUALITY PANEL

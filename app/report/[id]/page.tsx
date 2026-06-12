@@ -21,7 +21,10 @@ export default function ReportPage() {
 
   const [report, setReport] =
     useState<any>(null);
-
+    const [showPayment, setShowPayment] =
+  useState(false);
+const paymentRef =
+  `RUNLAB-${report?.id?.slice(0, 8)}`;
   const loadReport = async () => {
     const { data, error } =
       await supabase
@@ -192,7 +195,6 @@ const handlePayment = async () => {
   }
 };
 
-   
 
 
   return (
@@ -227,8 +229,29 @@ const handlePayment = async () => {
           พร้อม PDF และคำแนะนำเชิงลึก
         </p>
 
-        <button
-  onClick={handlePayment}
+    <button
+onClick={async () => {
+  setShowPayment(true);
+
+  const { error } =
+    await supabase
+      .from("reports")
+      .update({
+        payment_reference:
+          paymentRef,
+
+        payment_status:
+          "pending",
+
+        payment_created_at:
+          new Date().toISOString(),
+      })
+      .eq("id", report.id);
+
+  if (error) {
+    console.error(error);
+  }
+}}
   style={{
     background:
       "linear-gradient(135deg,#00E5FF,#009DFF)",
@@ -240,37 +263,119 @@ const handlePayment = async () => {
     cursor: "pointer",
   }}
 >
-  🔓 ปลดล็อก 500 บาท
+  💎 ปลดล็อก Premium Report
 </button>
-{qrImage && (
-  <div style={{ marginTop: 20 }}>
-    <h3>สแกนเพื่อชำระเงิน</h3>
 
-    <img
-      src={qrImage}
-      alt="PromptPay QR"
-      style={{
-        width: 280,
-        borderRadius: 12,
-      }}
-    />
-  </div>
-)}
-  {report?.is_paid && (
+ {showPayment && (
   <div
     style={{
-      background: "#052e16",
-      border: "1px solid #22c55e",
-      color: "#22c55e",
-      padding: 16,
-      borderRadius: 12,
+      marginTop: 24,
+      textAlign: "center",
+    }}
+  >
+  <h3
+    style={{
+      fontSize: 28,
+      marginBottom: 10,
+    }}
+  >
+    💎 Premium Report
+  </h3>
+
+  <div
+    style={{
+      fontSize: 42,
+      fontWeight: 800,
+      color: "#00E5FF",
       marginBottom: 20,
     }}
   >
-    ✅ Payment Successful
+    500 บาท
   </div>
-)}
 
+  <img
+    src="/promptpay-qr.png"
+    alt="PromptPay QR"
+    style={{
+      width: 300,
+      borderRadius: 16,
+      background: "#fff",
+      padding: 10,
+    }}
+  />
+  
+<div
+  style={{
+    marginTop: 20,
+    padding: 16,
+    background: "#07111f",
+    borderRadius: 12,
+    border: "1px solid #1e293b",
+  }}
+>
+  <div>
+    <strong>
+      Reference:
+    </strong>{" "}
+    {paymentRef}
+  </div>
+
+  <div
+    style={{
+      marginTop: 8,
+    }}
+  >
+    <strong>
+      Created:
+    </strong>{" "}
+    {new Date().toLocaleString(
+      "th-TH"
+    )}
+  </div>
+</div>
+  <p
+    style={{
+      marginTop: 20,
+      color: "#cbd5e1",
+    }}
+  >
+    สแกน QR เพื่อปลดล็อกรายงานฉบับเต็ม
+  </p>
+
+  <a
+    href="https://lin.ee/5Ajraht"
+    target="_blank"
+    rel="noreferrer"
+  >
+    <button
+      style={{
+        marginTop: 20,
+        background:
+          "linear-gradient(135deg,#00E5FF,#009DFF)",
+        color: "#000",
+        border: "none",
+        padding: "14px 24px",
+        borderRadius: 12,
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      📩 ฉันชำระเงินแล้ว
+    </button>
+  </a>
+
+    <div
+    style={{
+      marginTop: 16,
+      fontSize: 13,
+      color: "#94a3b8",
+    }}
+  >
+    หลังชำระเงิน กรุณาส่งสลิปพร้อม Reference Number
+ผ่าน LINE Official เพื่อยืนยันการชำระเงิน
+  </div>
+</div>
+)}
       </div>
     )}
    <div

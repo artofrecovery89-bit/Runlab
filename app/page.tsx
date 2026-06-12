@@ -220,9 +220,7 @@ function drawPoseSkeleton(ctx: CanvasRenderingContext2D, landmarks: any[], w: nu
     ctx.stroke();
   }
 }
-  console.log(
-    "DRAW POSE SKELETON"
-  );
+ 
 function Ring({ v = 0, size = 110 }) {
   const r = 40;
   const c = 2 * Math.PI * r;
@@ -647,7 +645,13 @@ function PoseSlot({ label, preview, onFile, onClear }: PoseSlotProps) {
       {preview ? (
         <div style={{ width: "100%", height: "100%", position: "relative" }}>
           <img src={preview} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 12 }} />
-          <button onClick={(e) => { e.preventDefault(); onClear(); }} style={{ position: "absolute", top: 6, right: 6, background: "rgba(239, 68, 68, 0.9)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={(e) => {
+  e.preventDefault();
+
+  if (typeof onClear === "function") {
+    onClear();
+  }
+}} style={{ position: "absolute", top: 6, right: 6, background: "rgba(239, 68, 68, 0.9)", color: "#fff", border: "none", borderRadius: 8, padding: "4px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
             ✕ เปลี่ยนรูป
           </button>
         </div>
@@ -2305,7 +2309,7 @@ Neck Angle (CVA): ${Math.round(
 
 
 
-        <div>Clerk Test</div>
+       
       </div>
 
 
@@ -2411,9 +2415,11 @@ Neck Angle (CVA): ${Math.round(
           <div style={{ display: "inline-block", padding: "8px 16px", borderRadius: "20px", border: "1px solid #00e5ff", color: "#00e5ff", marginBottom: "20px", fontSize: "14px" }}>
             ✦ AI Body Balance & Injury Prevention
           </div>
-          <h1 style={{ fontSize: "40px", marginBottom: "20px" }}>วิเคราะห์ท่าวิ่งด้วย AI แม่นยำสูง</h1>
+          <h1 style={{ fontSize: "40px", marginBottom: "20px" }}>วิเคราะห์การเคลื่อนไหวด้วย AI และหลักการ Biomechanics</h1>
           <p style={{ color: "#94a3b8", lineHeight: "1.6", marginBottom: "30px" }}>
-            ถอดรหัสโครงสร้างร่างกายจากรูปถ่ายและวิดีโอตอนวิ่งจริง ระบบจะช่วยล็อกจุดที่มีปัญหาร่วมกับการคำนวณของ AI เพื่อชี้เป้าความเสี่ยงการบาดเจ็บล่วงหน้า พร้อมแนะนำโปรแกรมฟื้นฟูกล้ามเนื้อที่ตรงจุดสำหรับคุณโดยเฉพาะ
+            RunLab AI ใช้เทคโนโลยี Computer Vision และหลักการวิเคราะห์การเคลื่อนไหว (Biomechanics) เพื่อประเมินรูปแบบการวิ่งจากภาพถ่ายและวิดีโอจริง ช่วยระบุความผิดปกติของการเคลื่อนไหว ความไม่สมดุลของร่างกาย และปัจจัยที่อาจส่งผลต่อประสิทธิภาพการวิ่งหรือเพิ่มความเครียดต่อข้อต่อและกล้ามเนื้อ
+
+ระบบจะนำเสนอผลการวิเคราะห์ในรูปแบบที่เข้าใจง่าย พร้อมคำแนะนำด้านการออกกำลังกาย การเสริมสร้างความแข็งแรง และการพัฒนาการเคลื่อนไหว เพื่อช่วยให้คุณวิ่งได้อย่างมีประสิทธิภาพมากขึ้นและลดความเสี่ยงจากการใช้งานร่างกายซ้ำ ๆ ในระยะยาว
           </p>
 
           <div style={{ display: "flex", gap: "15px", marginBottom: "40px" }}>
@@ -2469,8 +2475,8 @@ Neck Angle (CVA): ${Math.round(
           {[
             { label: "ประสิทธิภาพการจัดระเบียบท่าทางรวม", val: `${stableScore}%` },
             { label: "ความมั่นคงของเชิงกรานและสะโพก", val: "64%" },
-            { label: "แนวแกนเข่ารับแรงกระแทก", val: "72%" },
-            { label: "ความยืดหยุ่นข้อต่อยางล่าง", val: "72%" },
+            { label: "แนวแกนรับแรงกระแทกของเข่า", val: "72%" },
+            { label: "ความยืดหยุ่นข้อต่อช่วงล่าง", val: "72%" },
             { label: "ดัชนีความสมดุลซ้าย-ขวา", val: "68%" }
           ].map((item, index) => (
             <div key={index} style={{ marginBottom: "15px" }}>
@@ -2528,7 +2534,14 @@ Neck Angle (CVA): ${Math.round(
               front: publicUrl,
             }));
           }}
-        />
+        
+          onClear={() =>
+    setPostureImages((p) => ({
+      ...p,
+      front: null,
+    }))
+  }
+/>
 
 
         <PoseSlot
@@ -2559,8 +2572,14 @@ Neck Angle (CVA): ${Math.round(
               left: publicUrl.publicUrl,
             }));
           }}
-        />
-
+        
+    onClear={() =>
+    setPostureImages((p) => ({
+      ...p,
+      left: null,
+    }))
+  }
+/>
 
         <PoseSlot
           label="รูปด้านขวา (Right)"
@@ -2590,8 +2609,14 @@ Neck Angle (CVA): ${Math.round(
               right: publicUrl.publicUrl,
             }));
           }}
-        />
-
+        
+    onClear={() =>
+    setPostureImages((p) => ({
+      ...p,
+      right: null,
+    }))
+  }
+/>
 
         <PoseSlot
           label="รูปด้านหลัง (Back)"
@@ -2622,8 +2647,14 @@ Neck Angle (CVA): ${Math.round(
               back: publicUrl.publicUrl,
             }));
           }}
-        />
-
+        
+    onClear={() =>
+    setPostureImages((p) => ({
+      ...p,
+      back: null,
+    }))
+  }
+/>
       </div>
 
       <div
@@ -2719,6 +2750,54 @@ Neck Angle (CVA): ${Math.round(
                 </div>
               </div>
             )}
+            <div
+  style={{
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 20,
+    marginBottom: 20,
+    justifyContent: "center",
+  }}
+>
+  {[
+    "Evidence-Based Biomechanics",
+    "Computer Vision Technology",
+    "Developed by DUHA Technology",
+    "Research Validation In Progress",
+  ].map((item) => (
+    <div
+      key={item}
+      style={{
+        padding: "8px 14px",
+        borderRadius: 999,
+        background: "rgba(0,229,255,0.08)",
+        border: "1px solid rgba(0,229,255,0.25)",
+        color: "#00E5FF",
+        fontSize: 13,
+        fontWeight: 600,
+      }}
+    >
+      ✓ {item}
+    </div>
+  ))}
+</div>
+<div
+  style={{
+    marginTop: 16,
+    textAlign: "center",
+    fontSize: 13,
+    color: "#94a3b8",
+    maxWidth: 700,
+    marginLeft: "auto",
+    marginRight: "auto",
+    lineHeight: 1.6,
+  }}
+>
+    RunLab AI ถูกออกแบบเพื่อการประเมินการเคลื่อนไหว การพัฒนาสมรรถภาพ
+  และการให้ข้อมูลเชิงการศึกษาเท่านั้น ไม่ได้มีวัตถุประสงค์เพื่อใช้ในการวินิจฉัย
+  รักษา หรือทดแทนคำแนะนำทางการแพทย์จากผู้เชี่ยวชาญ
+</div>
           </div>
         </div>
       </div>
@@ -3062,29 +3141,30 @@ Neck Angle (CVA): ${Math.round(
         minHeight: 720,
       }}
     >
-      <RiskCard
-        title="Runner's Knee (สะบ้าอักเสบ)"
-        pct={injuryRisks.runnersKnee}
-        desc="ประเมินผิวข้อสะบ้าจากมุมเหยียดเข่า ร่วมกับภาวะเข่าบิดล้มเข้าด้านใน"
-      />
+     <RiskCard
+  title="Runner's Knee (Patellofemoral Pain)"
+  pct={injuryRisks.runnersKnee}
+  desc="ประเมินความเสี่ยงจากรูปแบบการเคลื่อนไหวของข้อเข่า การจัดแนวของขาส่วนล่าง และการควบคุมการทรงตัวระหว่างการวิ่ง ซึ่งอาจสัมพันธ์กับภาวะปวดบริเวณรอบสะบ้า"
+/>
 
-      <RiskCard
-        title="Achilles Tendonitis (เอ็นร้อยหวาย)"
-        pct={injuryRisks.achilles}
-        desc="คำนวณแรงเค้นสะสมจากระยะก้าวยาวเกินจุดศูนย์ถ่วงลำตัว (Overstride)"
-      />
+<RiskCard
+  title="Achilles Tendinopathy"
+  pct={injuryRisks.achilles}
+  desc="วิเคราะห์รูปแบบการลงน้ำหนัก ความยาวก้าววิ่ง และการควบคุมข้อเท้า เพื่อระบุปัจจัยที่อาจเพิ่มภาระต่อเอ็นร้อยหวายในระยะยาว"
+/>
 
-      <RiskCard
-        title="IT Band Syndrome (เจ็บข้างเข่า)"
-        pct={injuryRisks.itBand}
-        desc="วัดมุมบิดเค้นเนื้อเยื่อข้างขาจากการทรุดตัวของกระดูกเชิงกรานและสะโพก"
-      />
+<RiskCard
+  title="IT Band Syndrome"
+  pct={injuryRisks.itBand}
+  desc="ประเมินการควบคุมสะโพก แนวการเคลื่อนไหวของเข่า และความมั่นคงของเชิงกราน ซึ่งเป็นปัจจัยที่มักพบร่วมกับอาการปวดด้านข้างเข่าในนักวิ่ง"
+/>
 
-      <RiskCard
-        title="Shin Splints (เจ็บหน้าแข้ง)"
-        pct={injuryRisks.shinSplints}
-        desc="ประเมินแรงกระแทกแนวกระดูกหน้าแข้งจากการลงส้นเท้าล้ำแนวสะโพกเกินเกณฑ์"
-      />
+<RiskCard
+  title="Medial Tibial Stress Syndrome (Shin Splints)"
+  pct={injuryRisks.shinSplints}
+  desc="วิเคราะห์รูปแบบการรับแรงกระแทก การจัดแนวของขาส่วนล่าง และลักษณะการลงเท้า เพื่อประเมินความเสี่ยงของอาการปวดบริเวณกระดูกหน้าแข้ง"
+/>
+      
     </div>
   </div>
 </div>
@@ -3235,7 +3315,7 @@ Neck Angle (CVA): ${Math.round(
             }}
           >
             <span>🤖</span>
-            สรุปภาพรวมและข้อเสนอแนะเชิงชีวกลศาสตร์ (AI Overview)
+            สรุปภาพรวมและข้อเสนอแนะเชิงชีวกลศาสตร์ 
           </div>
 
           <p
@@ -3334,7 +3414,7 @@ Neck Angle (CVA): ${Math.round(
                     }}
                   >
                     <span>⏱️ 6 สัปดาห์</span>
-                    <span>📹 24 วิดีโอ</span>
+                    
                   </div>
                 </div>
 
@@ -3787,7 +3867,7 @@ Neck Angle (CVA): ${Math.round(
             </div>
             <div style={{ width: "100%", maxWidth: 300, height: 1, background: "linear-gradient(to right, transparent, #1e293b, transparent)" }} />
             <div style={{ fontSize: 12, color: "#64748b", textAlign: "center", lineHeight: 1.6 }}>
-              © {new Date().getFullYear()} <strong>Runlab by นายปริญญา ปานศิริ</strong>. All Rights Reserved.
+              © {new Date().getFullYear()} <strong>Runlab by DUHA technology</strong>. All Rights Reserved.
             </div>
           </div>
         </footer>
