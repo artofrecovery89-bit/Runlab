@@ -12,6 +12,20 @@ from "@/components/RunLabBodyRiskMap";
 
 
 export default function ReportPage() {
+  const [isMobile, setIsMobile] = useState(false);
+
+useEffect(() => {
+  const checkMobile = () => {
+    setIsMobile(window.innerWidth < 768);
+  };
+
+  checkMobile();
+
+  window.addEventListener("resize", checkMobile);
+
+  return () =>
+    window.removeEventListener("resize", checkMobile);
+}, []);
   const params = useParams();
 
   const reportId = params.id as string;
@@ -556,7 +570,9 @@ onClick={async () => {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(4,1fr)",
+        gridTemplateColumns: isMobile
+  ? "1fr 1fr"
+  : "repeat(4,1fr)",
         gap: 20,
         alignItems: "start",
       }}
@@ -690,7 +706,7 @@ onClick={async () => {
             color: "#10b981",
           }}
         >
-          ✅ {item}
+          {item}
         </div>
       )
     )}
@@ -753,7 +769,7 @@ onClick={async () => {
       color: "#fff",
     }}
   >
-    Lab Exercise Rehabilitation Center
+    DUHA TECHNOLOGY
   </h3>
 
   <p>

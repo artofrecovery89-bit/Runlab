@@ -1055,11 +1055,7 @@ export default function RunLabPremiumSystem() {
   const [isMobile, setIsMobile] = useState(false);
   const { user, isLoaded } = useUser();
 
-
-  console.log("LOADED =", isLoaded);
-  console.log("USER =", user);
   useEffect(() => {
-    console.log("USER =", user);
 
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -1181,9 +1177,9 @@ export default function RunLabPremiumSystem() {
   const [injuryRisks, setInjuryRisks] = useState({ runnersKnee: 78, achilles: 24, itBand: 64, shinSplints: 15 });
   const [subMetrics, setSubMetrics] = useState({ eff: 82, hip: 64, knee: 72, mob: 72, bal: 68 });
 
-  const [diagnosis, setDiagnosis] = useState("Runner's Knee (สะบ้าเข่าอักเสบ)");
-  const [recommendation, setRecommendation] = useState("เสริมสร้างกล้ามเนื้อหน้าขาด้านใน เลี่ยงการก้าวขาแล้วล็อกเข่าตึง และยืดคลายกล้ามเนื้อข้างขาหลังซ้อม");
-  const [analysisSummary, setAnalysisSummary] = useState("ตัวอย่างโมเดลเริ่มต้น: พบมุมองศาเข่าคงค้างขณะรับแรงบิดแคบลงร่วมกับมีสภาวะแกนเชิงกรานเอียง (Pelvic Tilt) ขณะก้าววิ่งน้ำหนักเสริมกระแทก");
+  const [diagnosis, setDiagnosis] = useState("");
+  const [recommendation, setRecommendation] = useState("");
+  const [analysisSummary, setAnalysisSummary] = useState("");
 
   const [slipImage, setSlipImage] = useState<string>("");
   const [selectedCourse, setSelectedCourse] = useState({
@@ -1743,31 +1739,40 @@ export default function RunLabPremiumSystem() {
         const peakInjuryName = sortedRisks[0][0];
         const peakInjuryScore = sortedRisks[0][1];
 
-        let diag = "สรีระการวิ่งปกติ (Low Risk)";
-        let rec = "คุณมีสมดุลการก้าววิ่งที่ดีเยี่ยม แนะนำวอร์มอัพและยืดคลายกล้ามเนื้อตามรอบปกติเพื่อรักษาความเสถียร";
-        let sum = "ระบบทำการตรวจพิกัดผสมโครงสร้างสำเร็จ ไม่พบแนุมุมองศาข้อต่อใดเกิดความเค้นวิกฤต";
+        diag = "ความเสี่ยงการบาดเจ็บต่ำ";
+
+rec =
+"จากผลการวิเคราะห์ในปัจจุบัน ยังไม่พบปัจจัยเสี่ยงที่ชัดเจนต่อการบาดเจ็บจากการวิ่ง แนะนำให้รักษาความแข็งแรง ความยืดหยุ่น และรูปแบบการเคลื่อนไหวที่ดีอย่างต่อเนื่อง";
+        let sum =
+"จากการวิเคราะห์แนวการเคลื่อนไหวและการจัดเรียงร่างกายโดย RunLab AI ไม่พบความผิดปกติที่เพิ่มความเสี่ยงต่อการบาดเจ็บอย่างมีนัยสำคัญในปัจจุบัน";
 
         if (peakInjuryScore > 40) {
           if (peakInjuryName === "runnersKnee") {
             diag = "Runner's Knee (สะบ้าเข่าอักเสบ)";
-            rec = "เสริมสร้างกล้ามเนื้อหน้าขาด้านใน เลี่ยงการก้าวขาแล้วล็อกเข่าตึง และยืดคลายกล้ามเนื้อข้างขาหลังซ้อม";
-            sum = `พบมุมองศาเข่าคงค้างขณะรับแรงบิดแคบลงร่วมกับมีพื้นฐานแนวเข่าบิดเข้าด้านใน (Knee Valgus: ${postureMetrics.kneeValgus}%) ทำให้กระดูกสะบ้าเสียดสีสูงขึ้น`;
+            rec = "แนะนำให้เพิ่มความแข็งแรงของกล้ามเนื้อสะโพกและต้นขา ฝึกการควบคุมแนวเข่าระหว่างการรับน้ำหนัก และลดการลงน้ำหนักซ้ำในรูปแบบที่เพิ่มแรงกดต่อกระดูกสะบ้า";
+            sum = `พบแนวโน้มการบิดเข้าด้านในของข้อเข่าระหว่างการรับน้ำหนัก (Knee Valgus ${postureMetrics.kneeValgus}%) ซึ่งอาจเพิ่มแรงกดต่อข้อสะบ้าและเพิ่มความเสี่ยงต่ออาการเจ็บบริเวณด้านหน้าหัวเข่า`;
           } else if (peakInjuryName === "achilles") {
             diag = "Achilles Tendonitis (เอ็นร้อยหวายอักเสบ)";
-            rec = "เน้นปรับจังหวะเท้าลงพื้นให้กระชับขึ้น เพิ่มความถี่รอบขา เพื่อดึงจุดลงน้ำหนักกลับมาใต้แกนกลางลำตัว";
-            sum = `ระยะก้าวเหยียดจุดสัมผัสล้ำหน้าเกินแนวตัว (Overstride) ประกอบกับรูปสรีระด้านหลังมีอาการข้อเท้าบิดล้มเข้าใน`;
+            rec = "แนะนำให้เพิ่มความแข็งแรงของกล้ามเนื้อน่อง ปรับจังหวะการลงเท้า และลดการลงน้ำหนักล้ำหน้าแนวลำตัวมากเกินไป";
+            sum = `พบความไม่สมดุลของการควบคุมเชิงกราน (Pelvic Asymmetry ${postureMetrics.pelvicAsymmetry}%) ซึ่งอาจเพิ่มแรงดึงต่อพังผืดด้านข้างต้นขาและเข่า`;
           } else if (peakInjuryName === "itBand") {
             diag = "IT Band Syndrome (เจ็บข้างเข่าด้านนอก)";
-            rec = "เพิ่มความแข็งแรงของกล้ามเนื้อสะโพกส่วนข้าง ด้วยท่า Clamshell หรือเตะขาออกด้านข้างเพื่อดึงแกนเชิงกรานให้นิ่ง";
-            sum = `แกนสะโพกเอียงทรุดตัวขณะก้าวลงน้ำหนัก ผนวกน้ำหนักเสริมแรงจากประวัติแนวกระดูกเชิงกรานเอียง (Pelvic Asymmetry: ${postureMetrics.pelvicAsymmetry}%)`;
+            rec = "แนะนำให้พัฒนาความแข็งแรงของกล้ามเนื้อสะโพกด้านข้าง เพิ่มการควบคุมเชิงกรานขณะรับน้ำหนัก และลดการทรุดตัวของสะโพกระหว่างการวิ่ง";
+            sum = `พบความไม่สมดุลของการควบคุมเชิงกราน (Pelvic Asymmetry ${postureMetrics.pelvicAsymmetry}%) ซึ่งอาจเพิ่มแรงดึงต่อพังผืดด้านข้างต้นขาและเข่า`;
           } else if (peakInjuryName === "shinSplints") {
             diag = "Shin Splints (เจ็บหน้าแข้ง)";
-            rec = "ลดการกระแทกส้นเท้าอย่างรุนแรง ฝึกความแข็งแรงของกล้ามเนื้อหน้าแข้ง และปรับจังหวะมาลงกลางเท้า";
+            rec = "แนะนำให้ลดแรงกระแทกจากการลงเท้า เพิ่มความแข็งแรงของกล้ามเนื้อหน้าแข้ง และค่อย ๆ เพิ่มปริมาณการฝึกซ้อมอย่างเหมาะสม";
             sum = `แนวก้าวยาวสร้างแรงเบรกสะท้อนย้อนกลับเข้าแนวกระดูกหน้าแข้งด้านใน ร่วมกับมีสภาวะแกนอุ้งเท้าบิดเอียงซัพพอร์ตต่ำ`;
           }
         }
 
-        setStableRiskLevel(peakInjuryScore > 70 ? "HIGH" : peakInjuryScore > 40 ? "MEDIUM" : "LOW");
+        setStableRiskLevel(
+  peakInjuryScore > 70
+    ? "ความเสี่ยงสูง"
+    : peakInjuryScore > 40
+    ? "ความเสี่ยงปานกลาง"
+    : "ความเสี่ยงต่ำ"
+);
         setDiagnosis(diag);
         setRecommendation(rec);
         setAnalysisSummary(sum);
@@ -2104,31 +2109,31 @@ Neck Angle (CVA): ${Math.round(
             : null,
         ].filter(Boolean),
 
-        recommendations: [
-          (postureMetrics.forwardHeadScore || 0) > 20
-            ? "Chin Tuck 3 เซ็ต x 15 ครั้ง"
-            : null,
+       recommendations: [
+  (postureMetrics.forwardHeadScore || 0) > 20
+    ? "🎯 Chin Tuck — 3 เซ็ต × 15 ครั้ง ช่วยปรับแนวศีรษะ ลดภาระกล้ามเนื้อคอและบ่า"
+    : null,
 
-          (postureMetrics.forwardHeadScore || 0) > 20
-            ? "Wall Angel 3 เซ็ต x 10 ครั้ง"
-            : null,
+  (postureMetrics.forwardHeadScore || 0) > 20
+    ? "🎯 band face pull — 3 เซ็ต × 10 ครั้ง ช่วยเพิ่มการเคลื่อนไหวของหัวไหล่และกระดูกสันหลังส่วนอก"
+    : null,
 
-          (postureMetrics.roundedShoulder || 0) > 2
-            ? "Doorway Stretch 3 เซ็ต x 30 วินาที"
-            : null,
+  (postureMetrics.roundedShoulder || 0) > 2
+    ? "🎯 Doorway Stretch — 3 เซ็ต × 30 วินาที ช่วยลดความตึงของกล้ามเนื้อหน้าอกและเปิดแนวไหล่"
+    : null,
 
-          (postureMetrics.roundedShoulder || 0) > 2
-            ? "Band Pull Apart 3 เซ็ต x 15 ครั้ง"
-            : null,
+  (postureMetrics.roundedShoulder || 0) > 2
+    ? "🎯 Band Pull Apart — 3 เซ็ต × 15 ครั้ง ช่วยเสริมความแข็งแรงของกล้ามเนื้อหลังส่วนบน"
+    : null,
 
-          (postureMetrics.upperCross || 0) > 20
-            ? "Deep Neck Flexor Training"
-            : null,
+  (postureMetrics.upperCross || 0) > 20
+    ? "🎯 Reverse grip band row — 3 เซ็ต × 12 ครั้ง ช่วยพัฒนากล้ามเนื้อหลังส่วนกลาง ให้แข็งแรงขึ้น"
+    : null,
 
-          (postureMetrics.lowerCross || 0) > 20
-            ? "Hip Flexor Stretch"
-            : null,
-        ].filter(Boolean),
+  (postureMetrics.lowerCross || 0) > 20
+    ? "🎯 Hip Flexor Stretch — 3 เซ็ต × 30 วินาที ช่วยลดความตึงของกล้ามเนื้อสะโพกด้านหน้า"
+    : null,
+].filter(Boolean),
       },
 
       movementScore: stableScore,
@@ -2395,20 +2400,24 @@ Neck Angle (CVA): ${Math.round(
 
 
       {/* HERO SECTION */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile
-          ? "1fr"
-          : "1fr 450px",
-        gap: "60px",
-        alignItems: "center",
-        padding: "40px",
-        backgroundColor: "#050a14",
-        color: "#fff",
-        fontFamily: "sans-serif",
-        maxWidth: "1200px",
-        margin: "0 auto"
-      }}>
+    <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: isMobile
+      ? "1fr"
+      : "1fr 450px",
+    gap: isMobile ? "24px" : "60px",
+    alignItems: "center",
+    padding: isMobile ? "20px" : "40px",
+    backgroundColor: "#050a14",
+    color: "#fff",
+    fontFamily: "sans-serif",
+    width: "100%",
+    maxWidth: "1200px",
+    margin: "0 auto",
+    boxSizing: "border-box",
+  }}
+>
 
         {/* ส่วนเนื้อหาซ้าย */}
         <div>
@@ -2468,7 +2477,13 @@ Neck Angle (CVA): ${Math.round(
         </div>
 
         {/* ส่วนการ์ดรายงาน (ขวา) */}
-        <div style={{ background: "rgba(30, 41, 59, 0.5)", padding: "30px", borderRadius: "20px", border: "1px solid #334155", backdropFilter: "blur(10px)" }}>
+        <div
+  style={{
+  background: "rgba(30, 41, 59, 0.5)",
+  padding: "20px",
+  borderRadius: "20px",
+}}
+>
           <h3 style={{ textAlign: "center", marginBottom: "20px" }}>RUNLAB REPORT SCORE</h3>
           <div style={{ textAlign: "center", fontSize: "64px", fontWeight: "bold", color: "#00e5ff", marginBottom: "20px" }}>{stableScore}</div>
 
@@ -2849,7 +2864,9 @@ Neck Angle (CVA): ${Math.round(
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(4,1fr)",
+                 gridTemplateColumns: isMobile
+  ? "1fr 1fr"
+  : "repeat(4,1fr)",
                   gap: 16,
                   marginTop: 20,
                   marginBottom: 24,
@@ -3271,7 +3288,7 @@ Neck Angle (CVA): ${Math.round(
                     marginBottom: 10,
                   }}
                 >
-                  RECOMMENDED CORRECTIVE EXERCISES
+                  🎯 โปรแกรมแก้ไขเฉพาะบุคคล
                 </div>
 
                 {(reportData?.officeSyndrome?.recommendations?.length || 0) > 0 ? (
@@ -3294,7 +3311,9 @@ Neck Angle (CVA): ${Math.round(
                       fontSize: 14,
                     }}
                   >
-                    ไม่พบความผิดปกติที่ต้องแก้ไขเพิ่มเติม
+                    {officeRisk > 20
+  ? "พบความเสี่ยงที่ควรได้รับการแก้ไขและฟื้นฟูเพิ่มเติม"
+  : "ไม่พบความผิดปกติที่ต้องได้รับการแก้ไขเพิ่มเติมในขณะนี้ แนะนำให้รักษาความแข็งแรง ความยืดหยุ่น และกิจกรรมทางกายอย่างสม่ำเสมอ เพื่อคงประสิทธิภาพการเคลื่อนไหวและลดความเสี่ยงการบาดเจ็บในอนาคต"}
                   </div>
                 )}
               </div>
@@ -3326,13 +3345,19 @@ Neck Angle (CVA): ${Math.round(
               margin: 0,
             }}
           >
-            {analysisSummary || "ระบบกำลังประมวลผลโครงสร้างเพื่อสรุปพฤติกรรมแรงกดและแนวองศากระดูกของคุณ"}
+            {
+  analysisSummary ||
+  "RunLab AI กำลังวิเคราะห์รูปแบบการเคลื่อนไหว การจัดแนวร่างกาย และปัจจัยเสี่ยงทางชีวกลศาสตร์ของคุณ"
+}
           </p>
         </div>
         <div style={{ ...S.card, background: "#08101f" }}>
           <div style={{ fontWeight: 700, marginBottom: 12, color: "#f59e0b", fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><span>🎯</span> แนวทางและโปรแกรมแก้ไข: {diagnosis || "รอข้อมูล"}</div>
           <div style={{ background: "#040914", border: "1px solid #1e293b", borderRadius: 14, padding: "16px", fontSize: 13, color: "#e2e8f0", lineHeight: 1.7 }}>
-            {recommendation || "แนวทางฝึกความแข็งแรงกล้ามเนื้อและปรับฟอร์มการวิ่งที่ถูกต้องเพื่อลดการบาดเจ็บ"}
+            {
+  recommendation ||
+  "แนะนำให้พัฒนาความแข็งแรงของกล้ามเนื้อแกนกลางลำตัว สะโพก และขา ควบคู่กับการปรับรูปแบบการเคลื่อนไหว เพื่อเพิ่มประสิทธิภาพการวิ่งและลดความเสี่ยงการบาดเจ็บในระยะยาว"
+}
           </div>
         </div>
 
@@ -3395,9 +3420,7 @@ Neck Angle (CVA): ${Math.round(
                       minHeight: 70,
                     }}
                   >
-                    ลดแรงกดเค้นที่ผิวข้อสะบ้าเข่า
-                    เสริมความแข็งแรงกล้ามเนื้อรอบหน้าขา
-                    เพื่อความมั่นคงในการลงน้ำหนัก
+                   แก้ปัญหาอาการเจ็บหัวเข่่าในนักวิิ่ง อย่างยั่งยืนและกลับไปวิ่งได้ดีขึ้น
                   </p>
 
                   <div
