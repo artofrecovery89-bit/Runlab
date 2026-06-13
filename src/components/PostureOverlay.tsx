@@ -97,7 +97,7 @@ export default function PostureOverlay({
           a?: Landmark,
           b?: Landmark,
           color = "#00E5FF",
-          width = 3
+          width = 2
         ) => {
           if (!a || !b) return;
 
@@ -201,68 +201,65 @@ export default function PostureOverlay({
         // ------------------
         // LANDMARKS
         // ------------------
+const visibleLandmarks = [
+  11, 12, // shoulder
+  13, 14, // elbow
+  15, 16, // wrist
 
-        landmarks.forEach(
-          (point, index) => {
-            if (!point) return;
+  23, 24, // hip
+  25, 26, // knee
+  27, 28, // ankle
+];
 
-            drawPoint(
-              point,
-              getVisibilityColor(
-                point.visibility ?? 1
-              )
-            );
+visibleLandmarks.forEach((index) => {
+  const point = landmarks[index];
 
-            if (DEBUG) {
-              ctx.fillStyle =
-                "#ffffff";
+  if (!point) return;
 
-              ctx.font =
-                "12px Arial";
+  drawPoint(
+    point,
+    getVisibilityColor(
+      point.visibility ?? 1
+    ),
+    4
+  );
 
-              ctx.fillText(
-                `${index}`,
-                toX(point.x) + 8,
-                toY(point.y) - 8
-              );
-            }
-          }
-        );
+  if (DEBUG) {
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "12px Arial";
 
-        // ------------------
-        // CENTERS
-        // ------------------
+    ctx.fillText(
+      `${index}`,
+      toX(point.x) + 8,
+      toY(point.y) - 8
+    );
+  }
+});
 
-        const leftShoulder =
-          landmarks[11];
+const leftShoulder = landmarks[11];
+const rightShoulder = landmarks[12];
 
-        const rightShoulder =
-          landmarks[12];
+const leftHip = landmarks[23];
+const rightHip = landmarks[24];
 
-        const leftHip =
-          landmarks[23];
+if (
+  !leftShoulder ||
+  !rightShoulder ||
+  !leftHip ||
+  !rightHip
+) {
+  return;
+}
 
-        const rightHip =
-          landmarks[24];
+const shoulderCenter = {
+  x: (leftShoulder.x + rightShoulder.x) / 2,
+  y: (leftShoulder.y + rightShoulder.y) / 2,
+};
 
-        if (
-          !leftShoulder ||
-          !rightShoulder ||
-          !leftHip ||
-          !rightHip
-        ) {
-          return;
-        }
-
-       // const shoulderCenter = {
-//   x: (leftShoulder.x + rightShoulder.x) / 2,
-//   y: (leftShoulder.y + rightShoulder.y) / 2,
-// };
-
-// const pelvisCenter = {
-//   x: (leftHip.x + rightHip.x) / 2,
-//   y: (leftHip.y + rightHip.y) / 2,
-// };
+const pelvisCenter = {
+  x: (leftHip.x + rightHip.x) / 2,
+  y: (leftHip.y + rightHip.y) / 2,
+};
 
         // ------------------
         // TRUNK POLYGON
@@ -310,13 +307,19 @@ export default function PostureOverlay({
 drawPoint(
   shoulderCenter,
   "#ff8800",
-  8
+  4
 );
 
 drawPoint(
   pelvisCenter,
   "#ff0000",
-  8
+  4
+);
+drawLine(
+  shoulderCenter,
+  pelvisCenter,
+  "#ff8800",
+  2
 );
        
       });
