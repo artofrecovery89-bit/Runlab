@@ -668,6 +668,7 @@ function PoseSlot({ label, preview, onFile, onClear }: PoseSlotProps) {
 }
 
 function InteractiveAnatomy({
+  
   risks,
   frontImage,
   frontLandmarks,
@@ -681,6 +682,10 @@ function InteractiveAnatomy({
   frontImage?: string;
   frontLandmarks?: any[];
 }) {
+    const isMobile =
+  typeof window !== "undefined"
+    ? window.innerWidth < 768
+    : false;
   const getRiskColor = (value: number) => {
     if (value >= 70) return "#ef4444";
     if (value >= 40) return "#f59e0b";
@@ -693,7 +698,8 @@ function InteractiveAnatomy({
     risks.achilles,
     risks.shinSplints
   );
-
+ console.log("frontImage", frontImage);
+  console.log("frontLandmarks", frontLandmarks);
   return (
     <div
       style={{
@@ -764,23 +770,22 @@ function InteractiveAnatomy({
       </div>
 
       {/* GRID */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.4fr 0.8fr",
-          gap: 24,
-          alignItems: "stretch",
-        }}
-      >
+<div
+  style={{
+    display: "block",
+    width: "100%",
+  }}
+>
         {/* LEFT IMAGE */}
-        <div
-          style={{
-            position: "relative",
-            background: "#020617",
-            borderRadius: 20,
-            overflow: "hidden",
-          }}
-        >
+<div
+  style={{
+    position: "relative",
+    width: "100%",
+    borderRadius: 20,
+    overflow: "hidden",
+    background: "#020617",
+  }}
+>
          {frontImage &&
 frontLandmarks?.length ? (
   <PostureOverlay
@@ -802,49 +807,7 @@ frontLandmarks?.length ? (
 )}
           
 
-          {/* RUNNER'S KNEE */}
-          <div
-            style={{
-              position: "absolute",
-              left: "48%",
-              top: "72%",
-              width: 18,
-              height: 18,
-              borderRadius: "50%",
-              background: "#ef4444",
-              boxShadow: "0 0 20px rgba(239,68,68,.9)",
-            }}
-          >
-            <div
-              className="risk-pulse"
-              style={{
-                inset: 0,
-                border: "2px solid #ef4444",
-              }}
-            />
-          </div>
-
-          {/* IT BAND */}
-          <div
-            style={{
-              position: "absolute",
-              left: "48%",
-              top: "52%",
-              width: 14,
-              height: 14,
-              borderRadius: "50%",
-              background: "#f59e0b",
-              boxShadow: "0 0 15px rgba(245,158,11,.8)",
-            }}
-          >
-            <div
-              className="risk-pulse"
-              style={{
-                inset: 0,
-                border: "2px solid #f59e0b",
-              }}
-            />
-          </div>
+          
         </div>
 
         {/* RIGHT PANEL */}
@@ -1739,9 +1702,9 @@ export default function RunLabPremiumSystem() {
         const peakInjuryName = sortedRisks[0][0];
         const peakInjuryScore = sortedRisks[0][1];
 
-        diag = "ความเสี่ยงการบาดเจ็บต่ำ";
+        let diag = "ความเสี่ยงการบาดเจ็บต่ำ";
 
-rec =
+        let rec =
 "จากผลการวิเคราะห์ในปัจจุบัน ยังไม่พบปัจจัยเสี่ยงที่ชัดเจนต่อการบาดเจ็บจากการวิ่ง แนะนำให้รักษาความแข็งแรง ความยืดหยุ่น และรูปแบบการเคลื่อนไหวที่ดีอย่างต่อเนื่อง";
         let sum =
 "จากการวิเคราะห์แนวการเคลื่อนไหวและการจัดเรียงร่างกายโดย RunLab AI ไม่พบความผิดปกติที่เพิ่มความเสี่ยงต่อการบาดเจ็บอย่างมีนัยสำคัญในปัจจุบัน";
@@ -2398,7 +2361,15 @@ Neck Angle (CVA): ${Math.round(
 
 
 
-
+<div
+  style={{
+    color: "red",
+    fontSize: 30,
+    fontWeight: "bold"
+  }}
+>
+  {isMobile ? "MOBILE" : "DESKTOP"}
+</div>
       {/* HERO SECTION */}
     <div
   style={{
@@ -2469,7 +2440,14 @@ Neck Angle (CVA): ${Math.round(
             </button>
           </div>
 
-          <div style={{ display: "flex", gap: "40px" }}>
+          <div
+  style={{
+    display: "flex",
+    gap: isMobile ? "16px" : "40px",
+    flexWrap: "wrap",
+    justifyContent: isMobile ? "center" : "flex-start",
+  }}
+>
             <div><div style={{ fontSize: "24px", fontWeight: "bold", color: "#00e5ff" }}>AI</div><div style={{ fontSize: "12px", color: "#64748b" }}>วิเคราะห์อัตโนมัติ</div></div>
             <div><div style={{ fontSize: "24px", fontWeight: "bold", color: "#00e5ff" }}>4</div><div style={{ fontSize: "12px", color: "#64748b" }}>กลุ่มความเสี่ยง</div></div>
             <div><div style={{ fontSize: "24px", fontWeight: "bold", color: "#00e5ff" }}>24/7</div><div style={{ fontSize: "12px", color: "#64748b" }}>พร้อมใช้งาน</div></div>
@@ -2495,7 +2473,14 @@ Neck Angle (CVA): ${Math.round(
             { label: "ดัชนีความสมดุลซ้าย-ขวา", val: "68%" }
           ].map((item, index) => (
             <div key={index} style={{ marginBottom: "15px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginBottom: "5px" }}>
+              <div
+  style={{
+    display: "flex",
+    gap: isMobile ? "16px" : "40px",
+    flexWrap: "wrap",
+    justifyContent: isMobile ? "center" : "flex-start",
+  }}
+>
                 <span>{item.label}</span>
                 <span>{item.val}</span>
               </div>
@@ -3124,40 +3109,46 @@ Neck Angle (CVA): ${Math.round(
       </div>
 
 {/* TWO-COLUMN LAYOUT: SKELETON MODEL VS RISK CARDS */}
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 24,
-    marginBottom: 30,
-    alignItems: "stretch",
-  }}
->
-  {/* LEFT */}
+console.log("FRONT IMAGE =", postureImages?.front);
+console.log("FRONT LANDMARK =", poseLandmarks?.front);
+
+return (
   <div
     style={{
-      height: "100%",
-      minHeight: 720,
+      display: "grid",
+      gridTemplateColumns: isMobile
+        ? "1fr"
+        : "1fr 1fr",
+      gap: 20,
+      marginBottom: 30,
     }}
   >
-<InteractiveAnatomy
-  risks={injuryRisks}
-  frontImage={postureImages?.front}
-  frontLandmarks={poseLandmarks?.front}
-/>
-);
-  </div>
-
-  {/* RIGHT */}
-  <div>
+    {/* LEFT */}
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 16,
-        minHeight: 720,
+        height: "100%",
+        minHeight: isMobile ? "auto" : 720,
       }}
     >
+      <InteractiveAnatomy
+        risks={injuryRisks}
+        frontImage={postureImages?.front}
+        frontLandmarks={poseLandmarks?.front}
+      />
+    </div>
+
+  {/* RIGHT */}
+<div>
+  <div
+    style={{
+      display: "grid",
+gridTemplateColumns: isMobile
+  ? "1fr"
+  : "1.4fr 0.8fr",
+      gap: isMobile ? 12 : 16,
+      minHeight: isMobile ? "auto" : 720,
+    }}
+  >
      <RiskCard
   title="Runner's Knee (Patellofemoral Pain)"
   pct={injuryRisks.runnersKnee}
