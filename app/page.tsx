@@ -76,7 +76,54 @@ function calcCVA(
     angle.toFixed(1)
   );
 }
+function normalizedAsymmetry(
+  leftPoint,
+  rightPoint
+) {
+  if (!leftPoint || !rightPoint)
+    return 0;
 
+  const width =
+    Math.abs(
+      leftPoint.x -
+      rightPoint.x
+    );
+
+  const heightDiff =
+    Math.abs(
+      leftPoint.y -
+      rightPoint.y
+    );
+
+  if (width === 0)
+    return 0;
+
+  return Number(
+    (
+      (heightDiff / width) *
+      100
+    ).toFixed(1)
+  );
+}
+function calcPelvicDrop(
+  leftHip,
+  rightHip
+) {
+  if (!leftHip || !rightHip)
+    return 0;
+
+  const angle =
+    Math.atan2(
+      rightHip.y - leftHip.y,
+      rightHip.x - leftHip.x
+    ) *
+    180 /
+    Math.PI;
+
+  return Number(
+    Math.abs(angle).toFixed(1)
+  );
+}
 
 // 2. ฟังก์ชันวัดมุมคอ (Neck Angle)
 const calcHeadAngle = (ear: any, shoulder: any) => {
@@ -1319,58 +1366,69 @@ export default function RunLabPremiumSystem() {
       console.log("12 =", frontLandmarks?.[12]);
 
 
-      // Shoulder Asymmetry
+// Shoulder Asymmetry
 
-      let frontShoulder = 0;
+let frontShoulder = 0;
 
-      if (
-        frontLandmarks &&
-        frontLandmarks.length > 12 &&
-        frontLandmarks[11] &&
-        frontLandmarks[12]
-      ) {
-        frontShoulder =
-          Math.abs(
-            frontLandmarks[11].y -
-            frontLandmarks[12].y
-          ) * 100;
-      } else {
-        console.log(
-          "Front landmarks missing",
-          frontLandmarks
-        );
-      }
-      let backShoulder = 0;
+if (
+  frontLandmarks &&
+  frontLandmarks.length > 12 &&
+  frontLandmarks[11] &&
+  frontLandmarks[12]
+) {
+  frontShoulder =
+    normalizedAsymmetry(
+      frontLandmarks[11],
+      frontLandmarks[12]
+    );
+}
 
-      if (
-        backLandmarks &&
-        backLandmarks.length > 12 &&
-        backLandmarks[11] &&
-        backLandmarks[12]
-      ) {
-        backShoulder =
-          Math.abs(
-            backLandmarks[11].y -
-            backLandmarks[12].y
-          ) * 100;
-      }
+let backShoulder = 0;
 
-      shoulderAsymmetry =
-        (frontShoulder + backShoulder) / 2;
+if (
+  backLandmarks &&
+  backLandmarks.length > 12 &&
+  backLandmarks[11] &&
+  backLandmarks[12]
+) {
+  backShoulder =
+    normalizedAsymmetry(
+      backLandmarks[11],
+      backLandmarks[12]
+    );
+}
 
-      // Pelvic Asymmetry
-      if (
-        backLandmarks &&
-        backLandmarks.length > 24 &&
-        backLandmarks[23] &&
-        backLandmarks[24]
-      ) {
-        pelvicAsymmetry =
-          Math.abs(
-            backLandmarks[23].y -
-            backLandmarks[24].y
-          ) * 100;
-      }
+shoulderAsymmetry =
+  Number(
+    (
+      (frontShoulder +
+        backShoulder) /
+      2
+    ).toFixed(1)
+  );
+
+     const shoulderWidth =
+Math.abs(
+  leftShoulder.x -
+  rightShoulder.x
+);
+
+const shoulderHeightDiff =
+Math.abs(
+  leftShoulder.y -
+  rightShoulder.y
+);
+
+shoulderAsymmetry =
+(
+  shoulderHeightDiff /
+  shoulderWidth
+) * 100;
+    pelvicAsymmetry =
+  normalizedAsymmetry(
+    backLandmarks[23],
+    backLandmarks[24]
+  );
 
       // CVA
       const sideLandmarks =
@@ -1427,36 +1485,51 @@ export default function RunLabPremiumSystem() {
           );
 
 
-      // Knee Valgus
-      if (
-        frontLandmarks &&
-        frontLandmarks.length > 27 &&
-        frontLandmarks[23] &&
-        frontLandmarks[25] &&
-        frontLandmarks[27]
-      ) {
-        kneeValgus =
-          Math.abs(
-            calcAngle(
-              frontLandmarks[23],
-              frontLandmarks[25],
-              frontLandmarks[27]
-            ) - 180
-          ) / 2;
-      }
-      // Foot Width
-      if (
-        backLandmarks &&
-        backLandmarks.length > 32 &&
-        backLandmarks[31] &&
-        backLandmarks[32]
-      ) {
-        footWidth =
-          Math.abs(
-            backLandmarks[31].x -
-            backLandmarks[32].x
-          ) * 100;
-      }
+      // Knee Valgus (FPPA)
+
+if (
+  frontLandmarks &&
+  frontLandmarks.length > 27 &&
+  frontLandmarks[23] &&
+  frontLandmarks[25] &&
+  frontLandmarks[27]
+) {
+  const fppa =
+    180 -
+    calcAngle(
+      frontLandmarks[23],
+      frontLandmarks[25],
+      frontLandmarks[27]
+    );
+
+  kneeValgus =
+    Math.max(
+      0,
+      Math.round(fppa)
+    );
+}
+     const hipWidth =
+  Math.abs(
+    backLandmarks[23].x -
+    backLandmarks[24].x
+  );
+
+const rawFootWidth =
+  Math.abs(
+    backLandmarks[31].x -
+    backLandmarks[32].x
+  );
+
+footWidth =
+  hipWidth > 0
+    ? Number(
+        (
+          (rawFootWidth /
+            hipWidth) *
+          100
+        ).toFixed(1)
+      )
+    : 0;
 
       const roundedShoulderRisk =
         roundedShoulder > 12
@@ -1559,7 +1632,11 @@ export default function RunLabPremiumSystem() {
         drawPoseSkeleton(ctx, lm, canvas.width, canvas.height);
 
         const currentKnee = calcAngle(lm[24], lm[26], lm[28]);
-        const currentDropRaw = Math.abs(lm[23].y - lm[24].y) * 180;
+        const currentDropRaw =
+  calcPelvicDrop(
+    lm[23],
+    lm[24]
+  );
 
         const ankleY = lm[28].y;
         if (lastAnkleY.current !== null) {
@@ -1604,6 +1681,13 @@ export default function RunLabPremiumSystem() {
 
 
         const finalKneeAngle = maxLockedKnee.current;
+        if (
+  currentDropRaw >
+  maxLockedDrop.current
+) {
+  maxLockedDrop.current =
+    currentDropRaw;
+}
         const finalPelvicDrop = maxLockedDrop.current;
         const finalOverstride = contactOverstride.current;
 
@@ -2361,15 +2445,6 @@ Neck Angle (CVA): ${Math.round(
 
 
 
-<div
-  style={{
-    color: "red",
-    fontSize: 30,
-    fontWeight: "bold"
-  }}
->
-  {isMobile ? "MOBILE" : "DESKTOP"}
-</div>
       {/* HERO SECTION */}
     <div
   style={{
