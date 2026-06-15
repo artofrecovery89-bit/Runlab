@@ -1407,23 +1407,23 @@ shoulderAsymmetry =
     ).toFixed(1)
   );
 
-     const shoulderWidth =
-Math.abs(
-  leftShoulder.x -
-  rightShoulder.x
+frontShoulder =
+normalizedAsymmetry(
+  frontLandmarks[11],
+  frontLandmarks[12]
 );
 
-const shoulderHeightDiff =
-Math.abs(
-  leftShoulder.y -
-  rightShoulder.y
+backShoulder =
+normalizedAsymmetry(
+  backLandmarks[11],
+  backLandmarks[12]
 );
 
 shoulderAsymmetry =
 (
-  shoulderHeightDiff /
-  shoulderWidth
-) * 100;
+  frontShoulder +
+  backShoulder
+) / 2;
     pelvicAsymmetry =
   normalizedAsymmetry(
     backLandmarks[23],
