@@ -739,14 +739,29 @@ function InteractiveAnatomy({
     return "#10b981";
   };
 
-  const primaryRisk = Math.max(
-    risks.runnersKnee,
-    risks.itBand,
-    risks.achilles,
-    risks.shinSplints
-  );
- console.log("frontImage", frontImage);
-  console.log("frontLandmarks", frontLandmarks);
+ const riskList = [
+  {
+    name: "Runner's Knee",
+    value: risks.runnersKnee,
+  },
+  {
+    name: "IT Band Syndrome",
+    value: risks.itBand,
+  },
+  {
+    name: "Achilles Tendinopathy",
+    value: risks.achilles,
+  },
+  {
+    name: "Shin Splints",
+    value: risks.shinSplints,
+  },
+];
+
+const primaryRisk =
+  riskList.sort(
+    (a, b) => b.value - a.value
+  )[0];
   return (
     <div
       style={{
@@ -874,27 +889,27 @@ frontLandmarks?.length ? (
               padding: 24,
             }}
           >
-            <div
-              style={{
-                fontSize: 60,
-                fontWeight: 800,
-                color: "#ef4444",
-                lineHeight: 1,
-              }}
-            >
-              {primaryRisk}%
-            </div>
+      <div
+  style={{
+    fontSize: 60,
+    fontWeight: 800,
+    color: "#ef4444",
+    lineHeight: 1,
+  }}
+>
+  {primaryRisk.value}%
+</div>
 
-            <div
-              style={{
-                color: "#fff",
-                fontSize: 24,
-                fontWeight: 700,
-                marginTop: 8,
-              }}
-            >
-              Runner's Knee
-            </div>
+<div
+  style={{
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: 700,
+    marginTop: 8,
+  }}
+>
+  {primaryRisk.name}
+</div>
 
             <div
               style={{
@@ -1693,7 +1708,15 @@ footWidth =
 
         const kneeDiff = 160 - finalKneeAngle;
         const calcKneeRisk = Math.min(95, Math.max(15, (kneeDiff > 0 ? kneeDiff * 2.8 : 15) + (postureMetrics.kneeValgus * 2.2)));
-        const calcItbRisk = Math.min(95, Math.max(12, (finalPelvicDrop * 8) + (postureMetrics.pelvicAsymmetry * 2.5)));
+const calcItbRisk = Math.min(
+  75,
+  Math.max(
+    10,
+    (finalPelvicDrop * 3) +
+    (postureMetrics.kneeValgus * 1.5) +
+    (postureMetrics.pelvicAsymmetry * 0.8)
+  )
+);
         const baseOverstrideRisk = finalOverstride > 10 ? (finalOverstride - 10) * 6 : 5;
         const calcAchillesRisk =
           Math.min(
@@ -2000,16 +2023,33 @@ footWidth =
     // หา Primary Risk
 
     const risks = [
-      { name: "Runner's Knee", value: injuryRisks.runnersKnee },
-      { name: "IT Band Syndrome", value: injuryRisks.itBand },
-      { name: "Achilles Tendinopathy", value: injuryRisks.achilles },
-      { name: "Shin Splints", value: injuryRisks.shinSplints },
-    ];
+  {
+    name: "Runner's Knee",
+    value: injuryRisks.runnersKnee,
+  },
+  {
+    name: "IT Band Syndrome",
+    value: injuryRisks.itBand,
+  },
+  {
+    name: "Achilles Tendinopathy",
+    value: injuryRisks.achilles,
+  },
+  {
+    name: "Shin Splints",
+    value: injuryRisks.shinSplints,
+  },
+];
 
-    const primaryRisk = risks.sort(
-      (a, b) => b.value - a.value
-    )[0];
-    setPrimaryRiskData(primaryRisk);
+const topRisk = risks.sort(
+  (a, b) => b.value - a.value
+)[0];
+
+const primaryRisk = risks.sort(
+  (a, b) => b.value - a.value
+)[0];
+
+const finalDiagnosis = primaryRisk.name;
 
     const finalReport = {
       score: stableScore,
@@ -2021,9 +2061,7 @@ footWidth =
       advice,
     };
 
-
-    console.log("REPORT SAVED");
-    console.log(finalReport);
+   
     const executiveSummary = `
 Movement Score : ${stableScore}/100
 
@@ -2217,18 +2255,18 @@ Neck Angle (CVA): ${Math.round(
 
     console.log("SAVE START");
 
-    const { data, error } =
-      await supabase
-        .from("reports")
-        .insert({
-          user_id: user?.id,
-          score: stableScore,
-          risk_level: stableRiskLevel,
-          diagnosis,
-          report_json: reportData,
-          is_paid: false,
-        })
-        .select();
+const { data, error } =
+  await supabase
+    .from("reports")
+    .insert({
+      user_id: user?.id,
+      score: stableScore,
+      risk_level: stableRiskLevel,
+      diagnosis: finalDiagnosis,
+      report_json: reportData,
+      is_paid: false,
+    })
+    .select();
 
     console.log("INSERT DATA =", data);
     console.log("INSERT ERROR =", error);
@@ -3184,8 +3222,6 @@ Neck Angle (CVA): ${Math.round(
       </div>
 
 {/* TWO-COLUMN LAYOUT: SKELETON MODEL VS RISK CARDS */}
-console.log("FRONT IMAGE =", postureImages?.front);
-console.log("FRONT LANDMARK =", poseLandmarks?.front);
 
 return (
   <div
